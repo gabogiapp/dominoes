@@ -4,7 +4,7 @@ import { useTournament } from '../../context/TournamentContext';
 
 export default function TeamManager() {
   const {
-    state, addTeam, bulkAddTeams, syncWithGoogleSheet, removeTeam, editTeam, withdrawTeam, loadDemoData, clearToRealTournament
+    state, setDemoMode, addTeam, bulkAddTeams, syncWithGoogleSheet, removeTeam, editTeam, withdrawTeam, loadDemoData, clearToRealTournament
   } = useTournament();
   const [newName, setNewName] = useState('');
   const [newP1, setNewP1] = useState('');
@@ -148,29 +148,26 @@ export default function TeamManager() {
       )}
 
       {/* Mode presets banner */}
-      <div className="mb-4 p-2.5 rounded-lg border border-timber/15 bg-bone-dark/20 flex items-center justify-between gap-2">
+      <div className={`mb-4 p-2.5 rounded-lg border flex items-center justify-between gap-2 ${
+        state.isDemo ? 'bg-brass/15 border-brass/35' : 'bg-bone-dark/20 border-timber/15'
+      }`}>
         <div className="flex items-center gap-1.5">
           <Sparkles size={13} className={state.isDemo ? "text-brass" : "text-felt"} />
           <span className="font-mono text-[10px] uppercase tracking-wider text-timber/70 font-semibold">
-            {state.isDemo ? 'Demo Mode Active' : activeTeams.length === 0 ? 'Real Mode (Empty)' : 'Real Tournament'}
+            {state.isDemo ? '🧪 Demo Testing Mode' : activeTeams.length === 0 ? '🏆 Live Mode (Empty)' : '🏆 Live Tournament'}
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {state.isDemo ? (
-            <button
-              onClick={clearToRealTournament}
-              className="px-2 py-1 bg-terra text-bone font-mono text-[9px] uppercase tracking-wider rounded hover:bg-terra-light transition-colors font-bold"
-            >
-              Clear to Real
-            </button>
-          ) : (
-            <button
-              onClick={loadDemoData}
-              className="px-2 py-1 bg-timber/10 text-timber hover:bg-timber/20 font-mono text-[9px] uppercase tracking-wider rounded transition-colors"
-            >
-              Load Demo
-            </button>
-          )}
+          <button
+            onClick={() => setDemoMode(!state.isDemo)}
+            className={`px-2 py-1 font-mono text-[9px] uppercase tracking-wider rounded font-bold transition-colors ${
+              state.isDemo
+                ? 'bg-felt text-bone hover:bg-felt-light'
+                : 'bg-brass/25 text-timber hover:bg-brass/40 border border-brass/40'
+            }`}
+          >
+            {state.isDemo ? 'Switch to Live' : 'Switch to Demo'}
+          </button>
         </div>
       </div>
 

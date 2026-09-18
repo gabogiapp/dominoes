@@ -14,7 +14,7 @@ import UndoDrawer from './UndoDrawer';
 
 export default function AdminToolbar({ isOpen, onClose }) {
   const {
-    state, startGroupStage, generateKnockout, resetTournament, fullReset, loadDemoData, clearToRealTournament, setTablesCount, updateConfig
+    state, setDemoMode, startGroupStage, generateKnockout, resetTournament, fullReset, loadDemoData, clearToRealTournament, setTablesCount, updateConfig
   } = useTournament();
   const [activeTab, setActiveTab] = useState('matches');
   const [confirmReset, setConfirmReset] = useState(null);
@@ -82,6 +82,27 @@ export default function AdminToolbar({ isOpen, onClose }) {
                   <X size={18} />
                 </button>
               </div>
+            </div>
+
+            {/* Mode Switcher Banner */}
+            <div className={`px-4 py-2 flex items-center justify-between text-xs border-b ${
+              state.isDemo
+                ? 'bg-brass/20 border-brass/40 text-timber'
+                : 'bg-felt/10 border-felt/20 text-timber'
+            }`}>
+              <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold">
+                <span>{state.isDemo ? '🧪 Demo Mode (Sandbox)' : '🏆 Live Tournament'}</span>
+              </div>
+              <button
+                onClick={() => setDemoMode(!state.isDemo)}
+                className={`px-2.5 py-1 font-mono text-[10px] uppercase font-bold rounded transition-colors tracking-wider ${
+                  state.isDemo
+                    ? 'bg-felt text-bone hover:bg-felt-light'
+                    : 'bg-brass text-timber hover:bg-brass-light'
+                }`}
+              >
+                {state.isDemo ? 'Switch to Live' : 'Switch to Demo'}
+              </button>
             </div>
 
             {/* Stage actions */}
@@ -221,22 +242,43 @@ export default function AdminToolbar({ isOpen, onClose }) {
                     <h3 className="font-display text-sm tracking-widest uppercase text-timber/60 mb-2">
                       Tournament Data Mode
                     </h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={clearToRealTournament}
-                        className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider rounded border border-terra/30 text-terra hover:bg-terra/10 transition-colors flex flex-col items-center justify-center gap-1 text-center font-bold"
-                      >
-                        <span>Start Real Mode</span>
-                        <span className="text-[8px] text-timber/40 font-normal">Clears demo teams</span>
-                      </button>
+                    <div className="p-3 rounded-lg border border-timber/15 bg-bone-dark/30 mb-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs uppercase font-bold text-timber">
+                          Current: {state.isDemo ? '🧪 Demo Testing Sandbox' : '🏆 Live Tournament'}
+                        </span>
+                        <button
+                          onClick={() => setDemoMode(!state.isDemo)}
+                          className={`px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider rounded font-bold transition-colors ${
+                            state.isDemo
+                              ? 'bg-felt text-bone hover:bg-felt-light'
+                              : 'bg-brass text-timber hover:bg-brass-light'
+                          }`}
+                        >
+                          {state.isDemo ? 'Switch to Live' : 'Switch to Demo'}
+                        </button>
+                      </div>
+                      <p className="font-sans text-[11px] text-timber/60 leading-relaxed">
+                        {state.isDemo
+                          ? 'You are in Demo Mode. 8 sample bodega teams and test matches are isolated here so real attendees will never see them. Real registrations stay intact in Live Mode.'
+                          : 'You are in Live Mode. Real attendee registrations and tournament brackets are displayed publicly.'}
+                      </p>
+                    </div>
+                    {state.isDemo ? (
                       <button
                         onClick={loadDemoData}
-                        className="py-2 px-3 font-mono text-[10px] uppercase tracking-wider rounded border border-timber/20 text-timber hover:bg-timber/5 transition-colors flex flex-col items-center justify-center gap-1 text-center font-bold"
+                        className="w-full py-2 px-3 font-mono text-xs uppercase tracking-wider rounded border border-timber/20 text-timber hover:bg-timber/5 transition-colors font-bold"
                       >
-                        <span>Load Demo Mode</span>
-                        <span className="text-[8px] text-timber/40 font-normal">8 sample teams</span>
+                        Reset Demo Data (8 Sample Teams)
                       </button>
-                    </div>
+                    ) : (
+                      <button
+                        onClick={clearToRealTournament}
+                        className="w-full py-2 px-3 font-mono text-xs uppercase tracking-wider rounded border border-terra/30 text-terra hover:bg-terra/10 transition-colors font-bold"
+                      >
+                        Clear All Live Teams (Clean Slate)
+                      </button>
+                    )}
                   </div>
 
                   {/* Reset tournament */}

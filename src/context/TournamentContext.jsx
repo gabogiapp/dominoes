@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useCallback, useSyncExternalStore } from 'react';
-import { loadState, saveState } from '../utils/storage';
+import {
+  loadState,
+  saveState,
+  isDemoMode,
+  setDemoMode as setStorageDemoMode,
+  STORAGE_KEY_LIVE,
+  STORAGE_KEY_DEMO,
+  DEMO_MODE_KEY,
+} from '../utils/storage';
 import { createHistoryManager } from '../utils/historyManager';
 import { DEFAULT_TEAMS, DEFAULT_TABLES_COUNT, DEFAULT_CONFIG } from '../utils/defaultData';
 import {
@@ -17,13 +25,16 @@ import {
 import { fetchTeamsFromGoogleSheet } from '../utils/googleSheets';
 
 // ─── Initial state ──────────────────────────────────────────────────
-function buildInitialState() {
-  const saved = loadState();
+function buildInitialState(demoOverride) {
+  const isDemo = demoOverride !== undefined ? demoOverride : isDemoMode();
+  const saved = loadState(isDemo);
+
   if (saved && saved.teams && Array.isArray(saved.teams)) {
     resetMatchIdCounter(saved.matches || []);
     resetTeamIdCounter(saved.teams || []);
     return {
       ...saved,
+      isDemo,
       config: {
         ...DEFAULT_CONFIG,
         ...(saved.config || {}),
@@ -33,12 +44,34 @@ function buildInitialState() {
       },
     };
   }
-  const teams = DEFAULT_TEAMS.map(t => ({ ...t, withdrawn: false }));
-  const rec = recommendGroups(teams.length);
-  const groups = distributeTeams(teams, rec.poolCount);
+
+  // Demo Mode initial state: Seed with the 8 bodega sample teams
+  if (isDemo) {
+    const teams = DEFAULT_TEAMS.map(t => ({ ...t, withdrawn: false }));
+    const rec = recommendGroups(teams.length);
+    const groups = distributeTeams(teams, rec.poolCount);
+    resetMatchIdCounter([]);
+    resetTeamIdCounter(teams);
+    return {
+      teams,
+      groups,
+      matches: [],
+      bracket: null,
+      stage: 'setup',
+      overrides: {},
+      champion: null,
+      tablesCount: DEFAULT_TABLES_COUNT,
+      config: { ...DEFAULT_CONFIG },
+      isDemo: true,
+    };
+  }
+
+  // Live Mode initial state: Clean empty tournament for public visitors
+  resetMatchIdCounter([]);
+  resetTeamIdCounter([]);
   return {
-    teams,
-    groups,
+    teams: [],
+    groups: {},
     matches: [],
     bracket: null,
     stage: 'setup',
@@ -46,6 +79,7 @@ function buildInitialState() {
     champion: null,
     tablesCount: DEFAULT_TABLES_COUNT,
     config: { ...DEFAULT_CONFIG },
+    isDemo: false,
   };
 }
 
@@ -67,14 +101,15 @@ function emitChange() {
 
 function setState(newState, skipSave) {
   _state = newState;
-  if (!skipSave) saveState(newState);
+  if (!skipSave) saveState(newState, newState?.isDemo);
   emitChange();
 }
 
-// Cross-tab sync
+// Cross-tab sync & Mode switch listener
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
-    if (e.key === 'dominoes_tournament' && e.newValue) {
+    const currentKey = isDemoMode() ? STORAGE_KEY_DEMO : STORAGE_KEY_LIVE;
+    if (e.key === currentKey && e.newValue) {
       try {
         const parsed = JSON.parse(e.newValue);
         if (parsed && typeof parsed === 'object') {
@@ -84,7 +119,17 @@ if (typeof window !== 'undefined') {
           emitChange();
         }
       } catch { /* ignore malformed */ }
+    } else if (e.key === DEMO_MODE_KEY) {
+      _history.clear();
+      _state = buildInitialState(isDemoMode());
+      emitChange();
     }
+  });
+
+  window.addEventListener('dominoes_mode_changed', () => {
+    _history.clear();
+    _state = buildInitialState(isDemoMode());
+    emitChange();
   });
 }
 
@@ -279,9 +324,17 @@ export function TournamentProvider({ children }) {
     });
   }, [mutate]);
 
-  const fullReset = useCallback(() => {
+  const switchMode = useCallback((demoEnabled) => {
+    setStorageDemoMode(demoEnabled);
     _history.clear();
-    const fresh = {
+    const nextState = buildInitialState(demoEnabled);
+    setState(nextState);
+  }, []);
+
+  const loadDemoData = useCallback(() => {
+    setStorageDemoMode(true);
+    _history.clear();
+    const demo = {
       teams: DEFAULT_TEAMS.map(t => ({ ...t, withdrawn: false })),
       groups: {},
       matches: [],
@@ -290,14 +343,44 @@ export function TournamentProvider({ children }) {
       overrides: {},
       champion: null,
       tablesCount: DEFAULT_TABLES_COUNT,
-      config: _state.config,
+      config: _state.config || { ...DEFAULT_CONFIG },
+      isDemo: true,
     };
-    const rec = recommendGroups(fresh.teams.length);
-    fresh.groups = distributeTeams(fresh.teams, rec.poolCount);
+    const rec = recommendGroups(demo.teams.length);
+    demo.groups = distributeTeams(demo.teams, rec.poolCount);
     resetMatchIdCounter([]);
-    resetTeamIdCounter(fresh.teams);
-    setState(fresh);
+    resetTeamIdCounter(demo.teams);
+    setState(demo);
   }, []);
+
+  const clearToRealTournament = useCallback(() => {
+    setStorageDemoMode(false);
+    _history.clear();
+    const clean = {
+      teams: [],
+      groups: {},
+      matches: [],
+      bracket: null,
+      stage: 'setup',
+      overrides: {},
+      champion: null,
+      tablesCount: DEFAULT_TABLES_COUNT,
+      config: _state.config || { ...DEFAULT_CONFIG },
+      isDemo: false,
+    };
+    resetMatchIdCounter([]);
+    resetTeamIdCounter([]);
+    setState(clean);
+  }, []);
+
+  const fullReset = useCallback(() => {
+    _history.clear();
+    if (_state.isDemo) {
+      loadDemoData();
+    } else {
+      clearToRealTournament();
+    }
+  }, [_state.isDemo, loadDemoData, clearToRealTournament]);
 
   const updateConfig = useCallback((newConfig) => {
     mutate('Updated tournament configuration', (s) => {
@@ -389,48 +472,10 @@ export function TournamentProvider({ children }) {
     };
   }, [mutate]);
 
-  const loadDemoData = useCallback(() => {
-    _history.clear();
-    const demo = {
-      teams: DEFAULT_TEAMS.map(t => ({ ...t, withdrawn: false })),
-      groups: {},
-      matches: [],
-      bracket: null,
-      stage: 'setup',
-      overrides: {},
-      champion: null,
-      tablesCount: DEFAULT_TABLES_COUNT,
-      config: _state.config || { ...DEFAULT_CONFIG },
-      isDemo: true,
-    };
-    const rec = recommendGroups(demo.teams.length);
-    demo.groups = distributeTeams(demo.teams, rec.poolCount);
-    resetMatchIdCounter([]);
-    resetTeamIdCounter(demo.teams);
-    setState(demo);
-  }, []);
-
-  const clearToRealTournament = useCallback(() => {
-    _history.clear();
-    const clean = {
-      teams: [],
-      groups: {},
-      matches: [],
-      bracket: null,
-      stage: 'setup',
-      overrides: {},
-      champion: null,
-      tablesCount: DEFAULT_TABLES_COUNT,
-      config: _state.config || { ...DEFAULT_CONFIG },
-      isDemo: false,
-    };
-    resetMatchIdCounter([]);
-    resetTeamIdCounter([]);
-    setState(clean);
-  }, []);
-
   const value = {
     state,
+    isDemo: Boolean(state.isDemo),
+    setDemoMode: switchMode,
     addTeam,
     bulkAddTeams,
     syncWithGoogleSheet,

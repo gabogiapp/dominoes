@@ -1,11 +1,12 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTournament } from '../context/TournamentContext';
 import { getActiveMatches, isGroupStageComplete } from '../utils/tournamentEngine';
 import TVStandingsTable from '../components/TVStandingsTable';
 import TVMatchCard from '../components/TVMatchCard';
 import { useAdminStatus } from '../utils/storage';
-import { Trophy } from 'lucide-react';
+import { Trophy, PlusCircle } from 'lucide-react';
 
 export default function TournamentPage() {
   const { state, recordWinner } = useTournament();
@@ -17,6 +18,7 @@ export default function TournamentPage() {
 
   // Setup state
   if (stage === 'setup') {
+    const activeTeams = teams.filter(t => !t.withdrawn);
     return (
       <div className="min-h-[calc(100vh-56px)] flex items-center justify-center p-4">
         <div className="text-center max-w-md">
@@ -27,16 +29,28 @@ export default function TournamentPage() {
             Coming Soon
           </h1>
           <div className="h-0.5 bg-terra w-16 mx-auto mb-4" />
-          <p className="font-sans text-sm text-timber/40">
-            {teams.filter(t => !t.withdrawn).length} teams registered · Waiting for tournament to begin
+          <p className="font-sans text-sm text-timber/60 mb-6">
+            {activeTeams.length > 0
+              ? `${activeTeams.length} teams registered · Waiting for tournament to begin`
+              : 'Registration is currently open · Be the first team to enter the tournament!'}
           </p>
-          <div className="flex flex-wrap justify-center gap-2 mt-6">
-            {teams.filter(t => !t.withdrawn).map(team => (
-              <span key={team.id} className="font-mono text-xs uppercase px-2 py-1 border border-timber/10 rounded text-timber/40">
-                {team.name}
-              </span>
-            ))}
-          </div>
+
+          {activeTeams.length === 0 ? (
+            <Link
+              to="/signup"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-terra text-bone font-display text-xs uppercase tracking-wider rounded font-bold hover:bg-terra-light transition-all shadow active:scale-95"
+            >
+              <PlusCircle size={15} /> Register Team Now
+            </Link>
+          ) : (
+            <div className="flex flex-wrap justify-center gap-2 mt-6">
+              {activeTeams.map(team => (
+                <span key={team.id} className="font-mono text-xs uppercase px-2 py-1 border border-timber/10 rounded text-timber/60 bg-bone">
+                  {team.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );

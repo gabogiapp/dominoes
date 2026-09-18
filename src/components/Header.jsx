@@ -4,10 +4,12 @@ import { motion } from 'framer-motion';
 import { Lock, Unlock, Menu, X, UserPlus, Volume2, VolumeX } from 'lucide-react';
 import { useAdminStatus } from '../utils/storage';
 import { playDominoClack, useDominoSound } from '../utils/dominoAudio';
+import { useTournament } from '../context/TournamentContext';
 import MiniDomino from './MiniDomino';
 
 export default function Header({ onAdminClick }) {
   const location = useLocation();
+  const { state } = useTournament();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isUnlocked = useAdminStatus();
   const [soundEnabled, toggleSound] = useDominoSound();
@@ -150,6 +152,20 @@ export default function Header({ onAdminClick }) {
             <span className="hidden xl:inline">{soundEnabled ? 'Sound' : 'Muted'}</span>
           </button>
 
+          {/* Demo Sandbox Indicator (only rendered when Demo mode is active) */}
+          {state.isDemo && (
+            <button
+              onClick={() => {
+                playDominoClack(1.1, 0.12);
+                onAdminClick();
+              }}
+              className="ml-1 px-2.5 py-1.5 text-xs font-mono tracking-wider uppercase flex items-center gap-1 rounded border border-brass/40 bg-brass/20 text-brass hover:bg-brass/30 transition-colors cursor-pointer"
+              title="Demo Testing Sandbox Active — Click to open admin"
+            >
+              <span>🧪 DEMO</span>
+            </button>
+          )}
+
           {/* Admin button */}
           <button
             onClick={() => {
@@ -181,6 +197,20 @@ export default function Header({ onAdminClick }) {
           >
             {soundEnabled ? <Volume2 size={16} className="text-brass" /> : <VolumeX size={16} className="text-bone/40" />}
           </button>
+
+          {/* Mobile Demo Badge */}
+          {state.isDemo && (
+            <button
+              onClick={() => {
+                playDominoClack(1.1, 0.12);
+                onAdminClick();
+              }}
+              className="px-2 py-1 text-[10px] font-mono tracking-wider uppercase rounded bg-brass/20 text-brass border border-brass/40 hover:bg-brass/30 transition-colors flex items-center gap-1"
+              title="Demo Testing Sandbox Active"
+            >
+              <span>🧪 DEMO</span>
+            </button>
+          )}
 
           <Link
             to="/signup"
