@@ -15,6 +15,7 @@ export default function Header({ onAdminClick }) {
     { to: '/tournament', label: 'Standings' },
     { to: '/bracket', label: 'Bracket' },
     { to: '/rules', label: 'Rules' },
+    { to: '/play', label: 'Play' },
   ];
 
   const isActive = (path) => location.pathname === path;

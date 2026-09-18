@@ -1,15 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Users, ArrowRight, Zap, RefreshCw, Layers } from 'lucide-react';
-import DominoCascade from '../components/animations/DominoCascade';
-import DominoSlam from '../components/animations/DominoSlam';
-import DominoShuffle from '../components/animations/DominoShuffle';
+import { Users, ArrowRight, Dices } from 'lucide-react';
+import DominoTile from '../components/DominoTile';
 import { useTournament } from '../context/TournamentContext';
 
 export default function LandingPage() {
   const { state } = useTournament();
-  const [activeAnimationTab, setActiveAnimationTab] = useState('cascade'); // 'cascade' | 'slam' | 'shuffle'
   const activeTeams = state.teams.filter((t) => !t.withdrawn);
 
   const stageLabel = {
@@ -22,7 +18,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-[calc(100vh-56px)] flex flex-col justify-between">
       {/* Main Streamlined Hero Section */}
-      <section className="relative overflow-hidden flex-1 flex flex-col items-center justify-center px-4 py-12 md:py-20 text-center">
+      <section className="relative overflow-hidden flex-1 flex flex-col items-center justify-center px-4 py-16 md:py-24 text-center">
         {/* Subtle Felt/Grain Backdrop */}
         <div
           className="absolute inset-0 opacity-[0.03] pointer-events-none"
@@ -52,74 +48,23 @@ export default function LandingPage() {
           <div className="h-0.5 bg-terra w-16 sm:w-20 mx-auto mb-3" />
 
           {/* Minimal Event Meta */}
-          <p className="font-mono text-[11px] sm:text-sm tracking-wider uppercase text-timber/60 mb-4 sm:mb-6">
+          <p className="font-mono text-[11px] sm:text-sm tracking-wider uppercase text-timber/60 mb-6">
             {state.config?.eventDate || 'October 17th 2026'} · 2v2 Invitational
           </p>
 
-          {/* Interactive Domino Centerpiece */}
-          <div className="my-6 p-3 sm:p-6 bg-timber/[0.02] border border-timber/10 rounded-2xl backdrop-blur-xs max-w-xl mx-auto shadow-xs">
-            {/* Mode Switcher */}
-            <div className="grid grid-cols-3 gap-1 mb-4 border-b border-timber/10 pb-3 max-w-sm mx-auto">
-              <button
-                onClick={() => setActiveAnimationTab('cascade')}
-                className={`px-2 py-1.5 rounded-lg font-mono text-[10px] sm:text-xs tracking-wider uppercase font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  activeAnimationTab === 'cascade'
-                    ? 'bg-timber text-bone shadow-xs'
-                    : 'text-timber/60 hover:text-timber hover:bg-timber/5'
-                }`}
-              >
-                <Layers size={12} /> Cascade
-              </button>
-              <button
-                onClick={() => setActiveAnimationTab('slam')}
-                className={`px-2 py-1.5 rounded-lg font-mono text-[10px] sm:text-xs tracking-wider uppercase font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  activeAnimationTab === 'slam'
-                    ? 'bg-terra text-bone shadow-xs'
-                    : 'text-timber/60 hover:text-timber hover:bg-timber/5'
-                }`}
-              >
-                <Zap size={12} /> Slam
-              </button>
-              <button
-                onClick={() => setActiveAnimationTab('shuffle')}
-                className={`px-2 py-1.5 rounded-lg font-mono text-[10px] sm:text-xs tracking-wider uppercase font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  activeAnimationTab === 'shuffle'
-                    ? 'bg-felt text-bone shadow-xs'
-                    : 'text-timber/60 hover:text-timber hover:bg-timber/5'
-                }`}
-              >
-                <RefreshCw size={12} /> Shuffle
-              </button>
+          {/* Tasteful Decorative Domino Motif */}
+          <div className="flex items-center justify-center gap-3 my-8 select-none">
+            <div className="-rotate-6 hover:rotate-0 transition-transform duration-200 cursor-pointer drop-shadow-md">
+              <DominoTile top={6} bottom={6} size="md" />
             </div>
-
-            {/* Animation Render */}
-            <div className="min-h-[160px] flex items-center justify-center">
-              {activeAnimationTab === 'cascade' && (
-                <DominoCascade
-                  tiles={[
-                    { top: 6, bottom: 6 },
-                    { top: 6, bottom: 5 },
-                    { top: 5, bottom: 5 },
-                    { top: 5, bottom: 4 },
-                    { top: 4, bottom: 4 },
-                    { top: 3, bottom: 3 },
-                    { top: 2, bottom: 2 },
-                  ]}
-                  size="sm"
-                />
-              )}
-              {activeAnimationTab === 'slam' && (
-                <DominoSlam tile={{ top: 6, bottom: 6 }} size="md" />
-              )}
-              {activeAnimationTab === 'shuffle' && (
-                <DominoShuffle size="xs" />
-              )}
+            <div className="rotate-6 hover:rotate-0 transition-transform duration-200 cursor-pointer drop-shadow-md">
+              <DominoTile top={5} bottom={5} size="md" />
             </div>
           </div>
 
           {/* Registration Status Pill */}
-          <div className="flex items-center justify-center gap-2 mb-6 sm:mb-8 px-2">
-            <span className="font-mono text-[10px] sm:text-xs tracking-wider uppercase px-3 py-1.5 rounded-full border border-brass text-timber/80 bg-brass/10 font-medium flex items-center gap-1.5 text-center">
+          <div className="flex items-center justify-center gap-2 mb-8 px-2">
+            <span className="font-mono text-[10px] sm:text-xs tracking-wider uppercase px-4 py-1.5 rounded-full border border-brass text-timber/80 bg-brass/10 font-medium flex items-center gap-2 text-center">
               <span className="w-2 h-2 rounded-full bg-terra inline-block shrink-0" />
               <span>{stageLabel[state.stage]} · {activeTeams.length} Teams Registered</span>
             </span>
@@ -137,12 +82,12 @@ export default function LandingPage() {
             </Link>
 
             {/* Understated Secondary Links */}
-            <div className="flex items-center justify-center flex-wrap gap-4 text-xs font-mono tracking-wider uppercase text-timber/60 mt-2">
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-mono tracking-wider uppercase text-timber/60 mt-3 px-2">
               <Link
                 to="/teams"
                 className="hover:text-terra transition-colors underline decoration-timber/20 underline-offset-4"
               >
-                View Teams Roster ({activeTeams.length})
+                Teams ({activeTeams.length})
               </Link>
               <span className="text-timber/30">·</span>
               <Link
@@ -156,7 +101,15 @@ export default function LandingPage() {
                 to="/rules"
                 className="hover:text-terra transition-colors underline decoration-timber/20 underline-offset-4"
               >
-                Tournament Rules
+                Rules
+              </Link>
+              <span className="text-timber/30">·</span>
+              <Link
+                to="/play"
+                className="hover:text-terra text-felt font-semibold transition-colors flex items-center gap-1 underline decoration-felt/30 underline-offset-4"
+              >
+                <Dices size={13} />
+                <span>Play Lounge</span>
               </Link>
             </div>
           </div>

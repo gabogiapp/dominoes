@@ -11,6 +11,7 @@ import SignUpPage from './pages/SignUpPage';
 import TournamentPage from './pages/TournamentPage';
 import BracketPage from './pages/BracketPage';
 import RulesPage from './pages/RulesPage';
+import PlayPage from './pages/PlayPage';
 import DominoTabTransition from './components/animations/DominoTabTransition';
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
               <Route path="/tournament" element={<TournamentPage />} />
               <Route path="/bracket" element={<BracketPage />} />
               <Route path="/rules" element={<RulesPage />} />
+              <Route path="/play" element={<PlayPage />} />
             </Routes>
           </DominoTabTransition>
 
