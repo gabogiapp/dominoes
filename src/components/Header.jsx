@@ -16,12 +16,12 @@ export default function Header({ onAdminClick }) {
   const [tiltDir, setTiltDir] = useState(0);
 
   const links = [
-    { to: '/', label: 'Home', tile: { top: 6, bottom: 6 } },
+    { to: '/', label: 'Home', tile: { top: 1, bottom: 1 } },
     { to: '/teams', label: 'Teams', tile: { top: 2, bottom: 2 } },
     { to: '/tournament', label: 'Standings', tile: { top: 3, bottom: 3 } },
     { to: '/bracket', label: 'Bracket', tile: { top: 4, bottom: 4 } },
     { to: '/rules', label: 'Rules', tile: { top: 5, bottom: 5 } },
-    { to: '/play', label: 'Play', tile: { top: 1, bottom: 1 } },
+    { to: '/play', label: 'Play', tile: { top: 6, bottom: 6 } },
   ];
 
   const allPaths = ['/', '/teams', '/tournament', '/bracket', '/rules', '/play', '/signup'];
