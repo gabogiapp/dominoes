@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback, useSyncExternalStore } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useSyncExternalStore } from 'react';
 import {
   loadState,
   saveState,
@@ -565,6 +565,83 @@ export function TournamentProvider({ children }) {
       teams: res.teams,
     };
   }, [mutate]);
+
+  // ─── Automatic Background Sync from Google Sheet ─────────────────
+  // Automatically pulls paid teams from Google Sheet whenever someone visits the site,
+  // refreshes, or refocuses the tab — eliminating manual syncing during registration.
+  // Strictly disabled in demo mode and once the tournament progresses past 'setup'.
+  useEffect(() => {
+    if (state.isDemo || state.stage !== 'setup') return;
+
+    const sheetUrl = state.config?.googleSheetUrl;
+    if (!sheetUrl) return;
+
+    let isMounted = true;
+    let lastSyncTime = 0;
+
+    const autoSync = async () => {
+      const now = Date.now();
+      if (now - lastSyncTime < 15000) return; // Throttle to 15s
+      lastSyncTime = now;
+
+      try {
+        const res = await fetchTeamsFromGoogleSheet(sheetUrl);
+        if (!isMounted || !res.success) return;
+
+        if (res.teams && res.teams.length > 0) {
+          mutate('Background auto-sync from Google Sheet', (s) => {
+            if (s.stage !== 'setup' || s.isDemo) return s;
+
+            const currentTeams = s.teams || [];
+            const isSameCount = currentTeams.length === res.teams.length;
+            const isSameTeams = isSameCount && res.teams.every((t, idx) =>
+              currentTeams[idx]?.name.toLowerCase() === t.name.toLowerCase() &&
+              currentTeams[idx]?.player1.toLowerCase() === t.player1.toLowerCase() &&
+              currentTeams[idx]?.player2.toLowerCase() === t.player2.toLowerCase()
+            );
+
+            if (isSameTeams) return s;
+
+            const existingByName = new Map(currentTeams.map(t => [t.name.toLowerCase(), t]));
+
+            const updatedTeams = res.teams.map(t => {
+              const existing = existingByName.get(t.name.toLowerCase());
+              return {
+                id: existing ? existing.id : nextTeamId(),
+                name: t.name,
+                player1: t.player1,
+                player2: t.player2,
+                withdrawn: existing?.withdrawn ?? false,
+              };
+            });
+
+            s.teams = updatedTeams;
+            const active = s.teams.filter(t => !t.withdrawn);
+            const rec = recommendGroups(active.length);
+            s.groups = distributeTeams(active, rec.poolCount);
+            return s;
+          });
+        }
+      } catch (err) {
+        console.warn('Background sheet auto-sync failed:', err);
+      }
+    };
+
+    autoSync();
+
+    if (typeof window !== 'undefined') {
+      const handleFocus = () => autoSync();
+      window.addEventListener('focus', handleFocus);
+      return () => {
+        isMounted = false;
+        window.removeEventListener('focus', handleFocus);
+      };
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [state.isDemo, state.stage, state.config?.googleSheetUrl, mutate]);
 
   const value = {
     state,
