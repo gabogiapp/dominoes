@@ -86,7 +86,7 @@ export default function DominoShuffle({ size = 'sm', isInteractive = true, label
           className="mt-3 px-4 py-1.5 bg-felt text-bone hover:bg-felt-light rounded-full text-xs font-mono tracking-wider uppercase font-semibold flex items-center gap-1.5 shadow transition-all active:scale-95 cursor-pointer"
         >
           <RefreshCw size={12} className="group-hover:rotate-180 transition-transform" />
-          <span>{label} (Shuffle)</span>
+          <span>{label}</span>
         </button>
       )}
     </div>
