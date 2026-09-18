@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Lock, Unlock, Menu, X, UserPlus, Volume2, VolumeX } from 'lucide-react';
 import { useAdminStatus } from '../utils/storage';
-import { playDominoClack, useDominoSound } from '../utils/dominoAudio';
+import { playDominoClack, useDominoSound, testDominoAudio } from '../utils/dominoAudio';
 import { useTournament } from '../context/TournamentContext';
 import MiniDomino from './MiniDomino';
 
@@ -138,7 +138,7 @@ export default function Header({ onAdminClick }) {
           <button
             onClick={() => {
               const next = toggleSound();
-              if (next) playDominoClack(1.3, 0.18);
+              if (next) testDominoAudio();
             }}
             className={`ml-1.5 px-2.5 py-1.5 text-xs font-mono tracking-wider uppercase flex items-center gap-1.5 rounded border transition-colors cursor-pointer ${
               soundEnabled
@@ -189,7 +189,7 @@ export default function Header({ onAdminClick }) {
           <button
             onClick={() => {
               const next = toggleSound();
-              if (next) playDominoClack(1.3, 0.18);
+              if (next) testDominoAudio();
             }}
             className="p-1.5 rounded text-bone/70 hover:text-bone hover:bg-timber-light cursor-pointer transition-colors"
             title={soundEnabled ? 'Mute sound' : 'Unmute sound'}
@@ -282,7 +282,7 @@ export default function Header({ onAdminClick }) {
           <button
             onClick={() => {
               const next = toggleSound();
-              if (next) playDominoClack(1.3, 0.18);
+              if (next) testDominoAudio();
             }}
             className={`mt-2 px-3 py-2 text-xs font-mono tracking-wider uppercase flex items-center justify-center gap-2 rounded border transition-colors cursor-pointer ${
               soundEnabled
