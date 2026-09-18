@@ -1,8 +1,15 @@
+import { useState, useEffect } from 'react';
+
 // Web Audio API synthesizer for realistic tactile domino clacks and slams
 // Zero external assets, works 100% offline, lazy-initialized on user gesture.
 
 let audioCtx = null;
-let soundEnabled = true;
+const STORAGE_KEY = 'dominoes_sound_enabled';
+
+// Load initial sound preference from localStorage (default: true)
+let soundEnabled = typeof window !== 'undefined'
+  ? localStorage.getItem(STORAGE_KEY) !== 'false'
+  : true;
 
 function getAudioContext() {
   if (typeof window === 'undefined') return null;
@@ -24,11 +31,35 @@ export function toggleDominoSound(enabled) {
   } else {
     soundEnabled = !soundEnabled;
   }
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(STORAGE_KEY, String(soundEnabled));
+      window.dispatchEvent(new CustomEvent('dominoes_sound_change', { detail: soundEnabled }));
+    } catch {}
+  }
   return soundEnabled;
 }
 
 export function isDominoSoundEnabled() {
   return soundEnabled;
+}
+
+export function useDominoSound() {
+  const [enabled, setEnabled] = useState(isDominoSoundEnabled);
+
+  useEffect(() => {
+    const handler = (e) => setEnabled(e.detail);
+    window.addEventListener('dominoes_sound_change', handler);
+    return () => window.removeEventListener('dominoes_sound_change', handler);
+  }, []);
+
+  const toggle = () => {
+    const next = toggleDominoSound();
+    setEnabled(next);
+    return next;
+  };
+
+  return [enabled, toggle];
 }
 
 // Crisp clack of two dominoes striking each other (used in chain topples)

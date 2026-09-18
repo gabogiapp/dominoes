@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Volume2, VolumeX } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import DominoTile from '../DominoTile';
-import { playDominoSlam, toggleDominoSound, isDominoSoundEnabled } from '../../utils/dominoAudio';
+import { playDominoSlam } from '../../utils/dominoAudio';
 
 export default function DominoSlam({
   tile = { top: 6, bottom: 6 },
@@ -12,7 +12,6 @@ export default function DominoSlam({
 }) {
   const [slamCount, setSlamCount] = useState(0);
   const [isShaking, setIsShaking] = useState(false);
-  const [soundOn, setSoundOn] = useState(isDominoSoundEnabled());
 
   const triggerSlam = () => {
     setSlamCount((prev) => prev + 1);
@@ -20,12 +19,6 @@ export default function DominoSlam({
     playDominoSlam(0.5);
     setTimeout(() => setIsShaking(false), 300);
     if (onSlam) onSlam();
-  };
-
-  const handleSoundToggle = (e) => {
-    e.stopPropagation();
-    const next = toggleDominoSound();
-    setSoundOn(next);
   };
 
   return (
@@ -106,14 +99,6 @@ export default function DominoSlam({
         >
           <Zap size={14} className="text-brass fill-brass" />
           <span>{label}</span>
-        </button>
-
-        <button
-          onClick={handleSoundToggle}
-          className="p-1.5 rounded-full text-timber/40 hover:text-timber/70 hover:bg-timber/5 transition-colors cursor-pointer"
-          title={soundOn ? 'Sound enabled' : 'Sound muted'}
-        >
-          {soundOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
         </button>
       </div>
     </div>

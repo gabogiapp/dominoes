@@ -1,19 +1,12 @@
 import React, { useState } from 'react';
-import { Layers, Zap, RefreshCw, Eye, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { Layers, Zap, RefreshCw, Eye, Sparkles } from 'lucide-react';
 import DominoCascade from '../components/animations/DominoCascade';
 import DominoSlam from '../components/animations/DominoSlam';
 import DominoShuffle from '../components/animations/DominoShuffle';
 import DominoFlipCard from '../components/animations/DominoFlipCard';
-import { toggleDominoSound, isDominoSoundEnabled } from '../utils/dominoAudio';
 
 export default function PlayPage() {
   const [activeTab, setActiveTab] = useState('cascade');
-  const [soundOn, setSoundOn] = useState(isDominoSoundEnabled());
-
-  const handleSoundToggle = () => {
-    const next = toggleDominoSound();
-    setSoundOn(next);
-  };
 
   const sampleTiles = [
     { top: 6, bottom: 6 },
@@ -62,9 +55,9 @@ export default function PlayPage() {
           </p>
         </div>
 
-        {/* Mode Selector and Audio Button */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-8 bg-bone-dark/50 p-2.5 rounded-2xl border border-timber/10 max-w-2xl mx-auto">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 w-full sm:w-auto">
+        {/* Mode Selector */}
+        <div className="flex items-center justify-center mb-8 bg-bone-dark/50 p-2 rounded-2xl border border-timber/10 max-w-xl mx-auto shadow-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 w-full">
             <button
               onClick={() => setActiveTab('cascade')}
               className={`px-3.5 py-2 rounded-xl font-mono text-xs tracking-wider uppercase font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
@@ -106,15 +99,6 @@ export default function PlayPage() {
               <Eye size={13} /> 3D Flip
             </button>
           </div>
-
-          <button
-            onClick={handleSoundToggle}
-            className="px-3 py-1.5 rounded-xl border border-timber/15 hover:bg-timber/5 font-mono text-xs uppercase tracking-wider text-timber/70 hover:text-timber flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-            title={soundOn ? 'Domino sound enabled' : 'Domino sound muted'}
-          >
-            {soundOn ? <Volume2 size={14} className="text-terra" /> : <VolumeX size={14} />}
-            <span>{soundOn ? 'Sound On' : 'Muted'}</span>
-          </button>
         </div>
 
         {/* Interactive Play Arena */}
@@ -137,8 +121,8 @@ export default function PlayPage() {
                 <h2 className="font-display text-xl font-bold uppercase text-timber tracking-wider mt-0.5">
                   Toppling Chain Reaction
                 </h2>
-                <p className="font-sans text-xs text-timber/50 mt-1">
-                  Click the button below or tap any individual tile to kickstart the cascade.
+                <p className="font-sans text-xs text-timber/60 mt-1 max-w-md mx-auto">
+                  Click any domino to topple the line from that exact position — preceding dominoes stay upright!
                 </p>
               </div>
 

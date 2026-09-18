@@ -1,15 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, Unlock, Menu, X, UserPlus } from 'lucide-react';
+import { Lock, Unlock, Menu, X, UserPlus, Volume2, VolumeX } from 'lucide-react';
 import { useAdminStatus } from '../utils/storage';
-import { playDominoClack } from '../utils/dominoAudio';
+import { playDominoClack, useDominoSound } from '../utils/dominoAudio';
 import MiniDomino from './MiniDomino';
 
 export default function Header({ onAdminClick }) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isUnlocked = useAdminStatus();
+  const [soundEnabled, toggleSound] = useDominoSound();
 
   const prevPathRef = useRef(location.pathname);
   const [tiltDir, setTiltDir] = useState(0);
@@ -131,13 +132,31 @@ export default function Header({ onAdminClick }) {
             <span>Sign Up</span>
           </Link>
 
+          {/* Global Sound Toggle Button */}
+          <button
+            onClick={() => {
+              const next = toggleSound();
+              if (next) playDominoClack(1.3, 0.18);
+            }}
+            className={`ml-1.5 px-2.5 py-1.5 text-xs font-mono tracking-wider uppercase flex items-center gap-1.5 rounded border transition-colors cursor-pointer ${
+              soundEnabled
+                ? 'border-brass/40 bg-brass/10 text-brass hover:bg-brass/20'
+                : 'border-bone/20 text-bone/40 hover:text-bone/60 hover:border-bone/40'
+            }`}
+            title={soundEnabled ? 'Domino sound enabled (click to mute site)' : 'Domino sound muted (click to enable)'}
+            aria-label={soundEnabled ? 'Mute sound' : 'Unmute sound'}
+          >
+            {soundEnabled ? <Volume2 size={13} className="text-brass" /> : <VolumeX size={13} />}
+            <span className="hidden xl:inline">{soundEnabled ? 'Sound' : 'Muted'}</span>
+          </button>
+
           {/* Admin button */}
           <button
             onClick={() => {
               playDominoClack(1.0, 0.12);
               onAdminClick();
             }}
-            className={`ml-3 px-3 py-1.5 text-xs font-mono tracking-wider uppercase flex items-center gap-1.5 rounded border transition-colors cursor-pointer ${
+            className={`ml-1 px-3 py-1.5 text-xs font-mono tracking-wider uppercase flex items-center gap-1.5 rounded border transition-colors cursor-pointer ${
               isUnlocked
                 ? 'border-terra bg-terra/10 text-terra hover:bg-terra/20'
                 : 'border-bone/20 text-bone/40 hover:text-bone/60 hover:border-bone/40'
@@ -150,6 +169,19 @@ export default function Header({ onAdminClick }) {
 
         {/* Mobile controls */}
         <div className="flex items-center gap-2 md:hidden">
+          {/* Mobile global sound toggle */}
+          <button
+            onClick={() => {
+              const next = toggleSound();
+              if (next) playDominoClack(1.3, 0.18);
+            }}
+            className="p-1.5 rounded text-bone/70 hover:text-bone hover:bg-timber-light cursor-pointer transition-colors"
+            title={soundEnabled ? 'Mute sound' : 'Unmute sound'}
+            aria-label={soundEnabled ? 'Mute sound' : 'Unmute sound'}
+          >
+            {soundEnabled ? <Volume2 size={16} className="text-brass" /> : <VolumeX size={16} className="text-bone/40" />}
+          </button>
+
           <Link
             to="/signup"
             onClick={() => handleNavClick(6)}
@@ -216,12 +248,28 @@ export default function Header({ onAdminClick }) {
             <span>Sign Up Now</span>
           </Link>
 
+          {/* Mobile drawer sound toggle */}
+          <button
+            onClick={() => {
+              const next = toggleSound();
+              if (next) playDominoClack(1.3, 0.18);
+            }}
+            className={`mt-2 px-3 py-2 text-xs font-mono tracking-wider uppercase flex items-center justify-center gap-2 rounded border transition-colors cursor-pointer ${
+              soundEnabled
+                ? 'border-brass/40 bg-brass/10 text-brass'
+                : 'border-bone/20 text-bone/60 hover:text-bone'
+            }`}
+          >
+            {soundEnabled ? <Volume2 size={13} className="text-brass" /> : <VolumeX size={13} />}
+            <span>{soundEnabled ? 'Site Sound: On' : 'Site Sound: Muted'}</span>
+          </button>
+
           <button
             onClick={() => {
               setMobileOpen(false);
               onAdminClick();
             }}
-            className={`mt-2 px-3 py-2 text-xs font-mono tracking-wider uppercase flex items-center justify-center gap-1.5 rounded border transition-colors cursor-pointer ${
+            className={`mt-1.5 px-3 py-2 text-xs font-mono tracking-wider uppercase flex items-center justify-center gap-1.5 rounded border transition-colors cursor-pointer ${
               isUnlocked
                 ? 'border-terra bg-terra/10 text-terra'
                 : 'border-bone/20 text-bone/60 hover:text-bone'
