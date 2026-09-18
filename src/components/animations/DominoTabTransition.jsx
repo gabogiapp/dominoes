@@ -20,6 +20,12 @@ export default function DominoTabTransition({ children }) {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [fallingStep, setFallingStep] = useState(0);
   const prevPathRef = useRef(location.pathname);
+  const timeoutsRef = useRef([]);
+
+  const clearTimeouts = () => {
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+  };
 
   useEffect(() => {
     // Only trigger when switching tabs/routes
@@ -27,92 +33,93 @@ export default function DominoTabTransition({ children }) {
       prevPathRef.current = location.pathname;
       setIsTransitioning(true);
       setFallingStep(0);
+      clearTimeouts();
 
       // Trigger sequential topples with audio
       const numTiles = CASCADE_TILES.length;
-      const stepDuration = 45; // fast, crisp 45ms per domino
+      const stepDuration = 38; // 38ms per tile = ~300ms cascade
 
       for (let i = 0; i < numTiles; i++) {
-        setTimeout(() => {
+        const tid = setTimeout(() => {
           setFallingStep(i + 1);
-          playDominoClack(1.0 + i * 0.06, 0.16);
+          playDominoClack(1.0 + i * 0.05, 0.18);
         }, i * stepDuration);
+        timeoutsRef.current.push(tid);
       }
 
-      // Hide transition ribbon after cascade finishes
-      const totalTime = numTiles * stepDuration + 400;
-      const timer = setTimeout(() => {
+      // Hide transition overlay smoothly after cascade settles
+      const totalTime = numTiles * stepDuration + 320;
+      const hideTid = setTimeout(() => {
         setIsTransitioning(false);
         setFallingStep(0);
       }, totalTime);
+      timeoutsRef.current.push(hideTid);
 
-      return () => clearTimeout(timer);
+      return clearTimeouts;
     }
   }, [location.pathname]);
 
   return (
     <div className="relative min-h-[calc(100vh-56px)]">
-      {/* Falling Domino Cascade Banner when switching tabs */}
+      {/* Centered Falling Domino Effect when switching tabs */}
       <AnimatePresence>
         {isTransitioning && (
           <motion.div
-            key={`domino-fall-${location.pathname}`}
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.25 }}
-            className="sticky top-14 z-40 w-full overflow-hidden bg-timber/95 border-b border-brass/40 shadow-lg py-2.5 backdrop-blur-sm"
+            key={`domino-center-${location.pathname}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-timber/25 backdrop-blur-[2px] pointer-events-none"
           >
-            <div className="max-w-4xl mx-auto px-4 flex items-center justify-between">
-              {/* Left label */}
-              <div className="hidden sm:flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-terra animate-pulse" />
-                <span className="font-mono text-[11px] tracking-[0.2em] uppercase text-bone/70 font-semibold">
-                  Domino Effect
-                </span>
-              </div>
-
-              {/* Falling Domino Chain */}
+            {/* Centered Floating Table Plate */}
+            <motion.div
+              initial={{ scale: 0.9, y: 8 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
+              className="bg-timber/95 border-2 border-brass/50 rounded-2xl px-6 py-5 shadow-2xl flex flex-col items-center justify-center max-w-sm sm:max-w-md mx-4"
+            >
+              {/* Domino felt track */}
               <div
-                className="flex items-end justify-center -space-x-1 sm:space-x-1 mx-auto"
+                className="relative flex items-end justify-center py-2 px-3 select-none"
                 style={{ perspective: 600 }}
               >
-                {CASCADE_TILES.map((tile, i) => {
-                  const hasFallen = fallingStep > i;
-                  return (
-                    <motion.div
-                      key={i}
-                      className="origin-bottom-right"
-                      initial={{ rotateZ: 0, x: 0 }}
-                      animate={{
-                        rotateZ: hasFallen ? 65 : 0,
-                        x: hasFallen ? 6 : 0,
-                        y: hasFallen ? 2 : 0,
-                      }}
-                      transition={{
-                        type: 'spring',
-                        stiffness: 550,
-                        damping: 20,
-                        mass: 0.5,
-                      }}
-                    >
-                      <DominoTile
-                        top={tile.top}
-                        bottom={tile.bottom}
-                        size="xs"
-                        className="drop-shadow-md"
-                      />
-                    </motion.div>
-                  );
-                })}
-              </div>
+                {/* Felt surface runner */}
+                <div className="absolute bottom-2 left-0 right-0 h-1 bg-felt/60 rounded-full" />
 
-              {/* Right target tab indicator */}
-              <div className="hidden sm:flex items-center gap-2 font-mono text-[11px] text-brass tracking-wider uppercase">
-                <span>Switching Tab</span>
-                <span className="text-terra">◆</span>
+                <div className="flex items-end -space-x-1 sm:space-x-1 relative z-10">
+                  {CASCADE_TILES.map((tile, i) => {
+                    const hasFallen = fallingStep > i;
+                    return (
+                      <motion.div
+                        key={i}
+                        className="origin-bottom-right"
+                        initial={{ rotateZ: 0, x: 0, y: 0 }}
+                        animate={{
+                          rotateZ: hasFallen ? 68 : 0,
+                          x: hasFallen ? 6 : 0,
+                          y: hasFallen ? 2 : 0,
+                        }}
+                        transition={{
+                          type: 'spring',
+                          stiffness: 600,
+                          damping: 22,
+                          mass: 0.5,
+                        }}
+                      >
+                        <DominoTile
+                          top={tile.top}
+                          bottom={tile.bottom}
+                          size="sm"
+                          className="drop-shadow-lg"
+                        />
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
