@@ -34,7 +34,7 @@ export default function App() {
   return (
     <TournamentProvider>
       <BrowserRouter>
-        <div className="min-h-screen bg-bone">
+        <div className="min-h-screen bg-bone overflow-x-hidden">
           <Header onAdminClick={handleAdminClick} />
 
           {/* Falling domino effect when switching tabs */}

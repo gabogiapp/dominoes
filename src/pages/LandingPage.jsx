@@ -29,18 +29,18 @@ export default function LandingPage() {
 
         <div className="relative max-w-3xl mx-auto w-full">
           {/* Tagline / Subtitle */}
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <span className="w-1.5 h-1.5 rounded-full bg-terra" />
-            <span className="font-mono text-xs tracking-[0.3em] uppercase text-timber/60 font-semibold">
+          <div className="flex items-center justify-center gap-2 mb-4 px-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-terra shrink-0" />
+            <span className="font-mono text-[10px] sm:text-xs tracking-[0.15em] sm:tracking-[0.25em] uppercase text-timber/60 font-semibold">
               Bodega Social Club Presents
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-terra" />
+            <span className="w-1.5 h-1.5 rounded-full bg-terra shrink-0" />
           </div>
 
           {/* Tournament Title */}
-          <h1 className="font-display text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold uppercase tracking-wide text-timber leading-[1.1] mb-3 max-w-full">
+          <h1 className="font-display text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-bold uppercase tracking-wide text-timber leading-[1.15] mb-3 px-2 flex flex-wrap items-center justify-center gap-x-3">
             {(state.config?.tournamentName || 'Dominoes Tournament').split(' ').map((word, i) => (
-              <span key={i} className="inline-block mx-1.5">{word}</span>
+              <span key={i} className="inline-block">{word}</span>
             ))}
           </h1>
 
@@ -48,7 +48,7 @@ export default function LandingPage() {
           <div className="h-0.5 bg-terra w-16 sm:w-20 mx-auto mb-3" />
 
           {/* Minimal Event Meta */}
-          <p className="font-mono text-[11px] sm:text-sm tracking-wider uppercase text-timber/60 mb-6">
+          <p className="font-mono text-[11px] sm:text-sm tracking-wider uppercase text-timber/60 mb-6 px-2">
             {state.config?.eventDate || 'October 17th 2026'} · 2v2 Invitational
           </p>
 
@@ -117,8 +117,8 @@ export default function LandingPage() {
       </section>
 
       {/* Streamlined Minimal Footer */}
-      <footer className="py-6 border-t border-timber/10 text-center bg-bone">
-        <p className="font-mono text-[10px] tracking-widest uppercase text-timber/40">
+      <footer className="py-6 border-t border-timber/10 text-center bg-bone px-4">
+        <p className="font-mono text-[10px] sm:text-xs tracking-wider uppercase text-timber/40">
           Bodega Social Club · Dominoes Invitational Tournament
         </p>
       </footer>
