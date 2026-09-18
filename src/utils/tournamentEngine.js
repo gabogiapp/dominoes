@@ -99,37 +99,50 @@ export function calcGroupStandings(groupId, teamIds, matches, overrides = {}) {
     if (stats[loserId]) { stats[loserId].losses++; stats[loserId].played++; }
   });
 
-  let standings = Object.values(stats);
+  const standings = Object.values(stats);
 
-  // Sort: most wins first, then head-to-head
-  standings.sort((a, b) => {
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    // head-to-head
-    const h2h = groupMatches.find(m =>
-      (m.teamA === a.teamId && m.teamB === b.teamId) ||
-      (m.teamA === b.teamId && m.teamB === a.teamId)
+  // Compute head-to-head wins among teams that share the exact same record (same wins, same losses)
+  standings.forEach(team => {
+    const sameRecordTeams = standings.filter(
+      other => other.teamId !== team.teamId && other.wins === team.wins && other.losses === team.losses
     );
-    if (h2h) {
-      const winner = overrides.manualWinner?.[h2h.id] || h2h.winner;
-      if (winner === a.teamId) return -1;
-      if (winner === b.teamId) return 1;
+    let h2hWins = 0;
+    if (sameRecordTeams.length > 0) {
+      const sameRecordIds = new Set(sameRecordTeams.map(t => t.teamId));
+      groupMatches.forEach(m => {
+        const winner = overrides.manualWinner?.[m.id] || m.winner;
+        if (winner === team.teamId) {
+          const opponent = m.teamA === team.teamId ? m.teamB : m.teamA;
+          if (sameRecordIds.has(opponent)) {
+            h2hWins++;
+          }
+        }
+      });
     }
-    return 0;
+    team.h2hWins = h2hWins;
   });
 
-  // Apply manual rank overrides
-  if (overrides.manualRank && overrides.manualRank[groupId]) {
-    const rankMap = overrides.manualRank[groupId]; // { teamId: rank }
-    standings.sort((a, b) => {
+  // Sort:
+  // 1. Manual rank overrides (if set by organizer)
+  // 2. Most wins first
+  // 3. Fewest losses first (higher win rate / fewer defeats)
+  // 4. Head-to-head wins among teams with identical records
+  // 5. Deterministic fallback by teamId
+  standings.sort((a, b) => {
+    if (overrides.manualRank && overrides.manualRank[groupId]) {
+      const rankMap = overrides.manualRank[groupId];
       const ra = rankMap[a.teamId];
       const rb = rankMap[b.teamId];
       if (ra != null && rb != null) return ra - rb;
       if (ra != null) return -1;
       if (rb != null) return 1;
-      if (b.wins !== a.wins) return b.wins - a.wins;
-      return 0;
-    });
-  }
+    }
+
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (a.losses !== b.losses) return a.losses - b.losses;
+    if (b.h2hWins !== a.h2hWins) return b.h2hWins - a.h2hWins;
+    return a.teamId.localeCompare(b.teamId);
+  });
 
   return standings;
 }
@@ -138,8 +151,15 @@ export function calcGroupStandings(groupId, teamIds, matches, overrides = {}) {
 export function detectTies(standings) {
   const ties = [];
   for (let i = 0; i < standings.length - 1; i++) {
-    if (standings[i].wins === standings[i + 1].wins && standings[i].wins > 0) {
-      ties.push([standings[i].teamId, standings[i + 1].teamId]);
+    const a = standings[i];
+    const b = standings[i + 1];
+    // Only genuine ties (identical wins AND identical losses) with at least 1 match played
+    if (a.wins === b.wins && a.losses === b.losses && (a.wins > 0 || a.losses > 0)) {
+      // If head-to-head already separated them, it's not an unresolved tie
+      if (a.h2hWins != null && b.h2hWins != null && a.h2hWins !== b.h2hWins) {
+        continue;
+      }
+      ties.push([a.teamId, b.teamId]);
     }
   }
   return ties;
@@ -441,28 +461,123 @@ export function getAllBracketMatches(bracket) {
   return bracket.rounds.flatMap(r => r.matches);
 }
 
-// ─── Determine status for a team in standings ───────────────────────
-export function getTeamStatus(teamId, groupId, standings, groups, matches, _overrides, advanceCount = 2) {
-  const playedMatches = matches.filter(
-    m => m.stage === 'group' && m.groupId === groupId && m.winner &&
-    (m.teamA === teamId || m.teamB === teamId)
-  ).length;
-  const allPlayed = playedMatches >= (groups[groupId].length - 1);
-  const rank = standings.findIndex(s => s.teamId === teamId);
+// ─── Determine status for all teams in a group ──────────────────────
+export function calcGroupStatusMap(groupId, standings, groups, matches, overrides = {}, advanceCount = 2) {
+  const statusMap = {};
+  const groupTeamIds = groups[groupId] || [];
+  const groupMatches = matches.filter(m => m.stage === 'group' && m.groupId === groupId);
+  const unplayedMatches = groupMatches.filter(m => !m.winner && !overrides.manualWinner?.[m.id]);
+  const playedMatchesCount = groupMatches.filter(m => m.winner || overrides.manualWinner?.[m.id]).length;
+  const isPoolComplete = groupMatches.length > 0 && unplayedMatches.length === 0;
 
-  if (!allPlayed && rank < advanceCount) return 'IN CONTENTION';
-  if (rank < advanceCount) return 'ADVANCING';
+  // Case 1: All pool matches complete
+  if (isPoolComplete) {
+    standings.forEach((s, rank) => {
+      if (overrides.manualAdvancement?.[groupId]) {
+        statusMap[s.teamId] = overrides.manualAdvancement[groupId].includes(s.teamId) ? 'ADVANCING' : 'ELIMINATED';
+      } else {
+        statusMap[s.teamId] = rank < advanceCount ? 'ADVANCING' : 'ELIMINATED';
+      }
+    });
+    return statusMap;
+  }
 
-  // Check if mathematically eliminated
-  const team = standings.find(s => s.teamId === teamId);
-  const remainingMatches = (groups[groupId].length - 1) - playedMatches;
-  const maxPossibleWins = (team?.wins || 0) + remainingMatches;
-  const secondPlaceWins = standings[advanceCount - 1]?.wins || 0;
+  // Case 2: Pool is in progress
+  // If no matches have been played yet at all, status is blank
+  if (playedMatchesCount === 0) {
+    groupTeamIds.forEach(id => { statusMap[id] = ''; });
+    return statusMap;
+  }
 
-  if (allPlayed && rank >= advanceCount) return 'ELIMINATED';
-  if (maxPossibleWins < secondPlaceWins) return 'ELIMINATED';
+  // Check manual advancement overrides
+  if (overrides.manualAdvancement?.[groupId]) {
+    standings.forEach(s => {
+      if (overrides.manualAdvancement[groupId].includes(s.teamId)) {
+        statusMap[s.teamId] = 'ADVANCING';
+      }
+    });
+  }
 
-  return '';
+  // Simulate remaining match outcomes to detect mathematically clinched or eliminated teams
+  if (unplayedMatches.length <= 8) {
+    const totalOutcomes = 1 << unplayedMatches.length;
+    const advanceCounts = {};
+    groupTeamIds.forEach(id => { advanceCounts[id] = 0; });
+
+    for (let outcome = 0; outcome < totalOutcomes; outcome++) {
+      const simMatches = matches.map(m => {
+        if (m.stage !== 'group' || m.groupId !== groupId || m.winner || overrides.manualWinner?.[m.id]) {
+          return m;
+        }
+        const uIdx = unplayedMatches.findIndex(um => um.id === m.id);
+        if (uIdx !== -1) {
+          const winner = (outcome & (1 << uIdx)) ? m.teamB : m.teamA;
+          return { ...m, winner };
+        }
+        return m;
+      });
+
+      const simStandings = calcGroupStandings(groupId, groupTeamIds, simMatches, overrides);
+      for (let r = 0; r < advanceCount && r < simStandings.length; r++) {
+        advanceCounts[simStandings[r].teamId]++;
+      }
+    }
+
+    standings.forEach((s, rank) => {
+      if (statusMap[s.teamId]) return;
+      const adv = advanceCounts[s.teamId] || 0;
+      if (adv === totalOutcomes) {
+        statusMap[s.teamId] = 'ADVANCING';
+      } else if (adv === 0) {
+        statusMap[s.teamId] = 'ELIMINATED';
+      } else if (rank < advanceCount) {
+        statusMap[s.teamId] = 'IN CONTENTION';
+      } else {
+        statusMap[s.teamId] = '';
+      }
+    });
+
+    return statusMap;
+  }
+
+  // Fallback for large pools (unplayed > 8)
+  const totalTeamMatches = groupTeamIds.length - 1;
+  standings.forEach((s, rank) => {
+    if (statusMap[s.teamId]) return;
+    const played = s.played || 0;
+    const remaining = Math.max(0, totalTeamMatches - played);
+    const maxWins = s.wins + remaining;
+
+    const teamsGuaranteedAhead = standings.filter(other => other.teamId !== s.teamId && other.wins > maxWins).length;
+    if (teamsGuaranteedAhead >= advanceCount) {
+      statusMap[s.teamId] = 'ELIMINATED';
+      return;
+    }
+
+    const otherTeamsCanCatch = standings.filter(other => {
+      if (other.teamId === s.teamId) return false;
+      const otherRemaining = Math.max(0, totalTeamMatches - (other.played || 0));
+      return (other.wins + otherRemaining) >= s.wins;
+    }).length;
+    if (otherTeamsCanCatch < advanceCount) {
+      statusMap[s.teamId] = 'ADVANCING';
+      return;
+    }
+
+    if (rank < advanceCount) {
+      statusMap[s.teamId] = 'IN CONTENTION';
+    } else {
+      statusMap[s.teamId] = '';
+    }
+  });
+
+  return statusMap;
+}
+
+// ─── Determine status for a single team in standings ────────────────
+export function getTeamStatus(teamId, groupId, standings, groups, matches, overrides = {}, advanceCount = 2) {
+  const statusMap = calcGroupStatusMap(groupId, standings, groups, matches, overrides, advanceCount);
+  return statusMap[teamId] || '';
 }
 
 // ─── Withdraw a team ────────────────────────────────────────────────
