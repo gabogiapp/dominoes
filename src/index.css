@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-bone: #F7F4EE;
+  --color-bone-dark: #EDE8DF;
+  --color-timber: #1E1611;
+  --color-timber-light: #3A2A20;
+  --color-felt: #1B4332;
+  --color-felt-light: #2D6A4F;
+  --color-felt-dark: #143328;
+  --color-terra: #D95D39;
+  --color-terra-light: #E8795A;
+  --color-brass: #DDA15E;
+  --color-brass-light: #E8BA82;
+
+  --font-display: 'Cinzel', serif;
+  --font-sans: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* Base */
+html { font-family: var(--font-sans); }
+body {
+  background-color: var(--color-bone);
+  color: var(--color-timber);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--color-bone); }
+::-webkit-scrollbar-thumb { background: var(--color-timber); border-radius: 3px; }
+
+/* Selection */
+::selection {
+  background-color: var(--color-terra);
+  color: white;
+}
