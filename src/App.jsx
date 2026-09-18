@@ -6,10 +6,12 @@ import Header from './components/Header';
 import AdminModal from './components/admin/AdminModal';
 import AdminToolbar from './components/admin/AdminToolbar';
 import LandingPage from './pages/LandingPage';
+import TeamsPage from './pages/TeamsPage';
 import SignUpPage from './pages/SignUpPage';
 import TournamentPage from './pages/TournamentPage';
 import BracketPage from './pages/BracketPage';
 import RulesPage from './pages/RulesPage';
+import DominoTabTransition from './components/animations/DominoTabTransition';
 
 export default function App() {
   const [showPinModal, setShowPinModal] = useState(false);
@@ -34,13 +36,17 @@ export default function App() {
         <div className="min-h-screen bg-bone">
           <Header onAdminClick={handleAdminClick} />
 
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/signup" element={<SignUpPage />} />
-            <Route path="/tournament" element={<TournamentPage />} />
-            <Route path="/bracket" element={<BracketPage />} />
-            <Route path="/rules" element={<RulesPage />} />
-          </Routes>
+          {/* Falling domino effect when switching tabs */}
+          <DominoTabTransition>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/teams" element={<TeamsPage />} />
+              <Route path="/signup" element={<SignUpPage />} />
+              <Route path="/tournament" element={<TournamentPage />} />
+              <Route path="/bracket" element={<BracketPage />} />
+              <Route path="/rules" element={<RulesPage />} />
+            </Routes>
+          </DominoTabTransition>
 
           {/* Admin PIN modal */}
           <AdminModal
