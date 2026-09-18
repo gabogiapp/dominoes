@@ -48,8 +48,9 @@ export default function MatchManager() {
         {(unplayed.length > 0 ? unplayed : groupMatches.filter(m => m.winner).slice(-4).reverse()).map((match) => {
           const teamA = getTeam(match.teamA);
           const teamB = getTeam(match.teamB);
-          if (!teamA || !teamB) return null;
-          const isActive = active.some(a => a.id === match.id);
+          const activeMatch = active.find(a => a.id === match.id);
+          const isActive = !!activeMatch;
+          const displayTable = activeMatch ? activeMatch.table : match.table;
 
           return (
             <div
@@ -61,7 +62,7 @@ export default function MatchManager() {
               {/* Match info header */}
               <div className="flex items-center justify-between mb-2">
                 <span className="font-mono text-[10px] tracking-widest uppercase text-timber/30">
-                  Table {match.table} • Pool {match.groupId}
+                  Table {displayTable} • Pool {match.groupId}
                 </span>
                 {isActive && (
                   <span className="font-mono text-[10px] tracking-widest uppercase text-felt font-bold">

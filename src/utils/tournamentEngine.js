@@ -49,38 +49,96 @@ export function distributeTeams(teams, poolCount) {
   return groups;
 }
 
-// ─── Round-robin schedule for a group ───────────────────────────────
-export function generateRoundRobin(teamIds) {
-  const pairs = [];
-  for (let i = 0; i < teamIds.length; i++) {
-    for (let j = i + 1; j < teamIds.length; j++) {
-      pairs.push([teamIds[i], teamIds[j]]);
-    }
+// ─── Round-robin schedule for a group (Berger / Polygon algorithm) ───
+export function generateRoundRobinRounds(teamIds) {
+  if (!teamIds || teamIds.length < 2) return [];
+  const teams = [...teamIds];
+  if (teams.length % 2 !== 0) {
+    teams.push(null); // Dummy bye placeholder for odd team count
   }
-  return pairs;
+  const n = teams.length;
+  const numRounds = n - 1;
+  const half = n / 2;
+  const rounds = [];
+
+  for (let r = 0; r < numRounds; r++) {
+    const roundPairs = [];
+    for (let i = 0; i < half; i++) {
+      const t1 = teams[i];
+      const t2 = teams[n - 1 - i];
+      if (t1 !== null && t2 !== null) {
+        roundPairs.push([t1, t2]);
+      }
+    }
+    rounds.push(roundPairs);
+
+    // Rotate teams array keeping teams[0] fixed
+    const fixed = teams[0];
+    const rotating = teams.slice(1);
+    const last = rotating.pop();
+    rotating.unshift(last);
+    teams.splice(0, teams.length, fixed, ...rotating);
+  }
+
+  return rounds;
+}
+
+export function generateRoundRobin(teamIds) {
+  return generateRoundRobinRounds(teamIds).flat();
 }
 
 // ─── Generate all group matches ─────────────────────────────────────
+// Interleaves rounds across pools so concurrent tables (e.g. Table 1 & Table 2)
+// naturally host completely distinct teams with zero schedule conflicts.
 export function generateGroupMatches(groups, tablesCount = 2) {
   const matches = [];
-  let tableIdx = 0;
+  const count = Math.max(1, tablesCount || 2);
   const groupLabels = Object.keys(groups).sort();
+  if (groupLabels.length === 0) return matches;
+
+  // Generate round-robin rounds for each pool
+  const groupRounds = {};
+  let maxRounds = 0;
   for (const groupId of groupLabels) {
-    const teamIds = groups[groupId];
-    const pairs = generateRoundRobin(teamIds);
-    pairs.forEach((pair) => {
-      tableIdx = (tableIdx % tablesCount) + 1;
-      matches.push({
-        id: nextMatchId(),
-        stage: 'group',
-        groupId,
-        teamA: pair[0],
-        teamB: pair[1],
-        table: tableIdx,
-        winner: null,
-      });
-    });
+    const rounds = generateRoundRobinRounds(groups[groupId]);
+    groupRounds[groupId] = rounds;
+    if (rounds.length > maxRounds) {
+      maxRounds = rounds.length;
+    }
   }
+
+  let tableIdx = 0;
+
+  // Interleave rounds across groups
+  for (let r = 0; r < maxRounds; r++) {
+    let maxMatchesInRound = 0;
+    for (const groupId of groupLabels) {
+      const roundMatches = groupRounds[groupId][r] || [];
+      if (roundMatches.length > maxMatchesInRound) {
+        maxMatchesInRound = roundMatches.length;
+      }
+    }
+
+    for (let mIdx = 0; mIdx < maxMatchesInRound; mIdx++) {
+      for (const groupId of groupLabels) {
+        const roundMatches = groupRounds[groupId][r];
+        if (roundMatches && mIdx < roundMatches.length) {
+          const pair = roundMatches[mIdx];
+          tableIdx = (tableIdx % count) + 1;
+          matches.push({
+            id: nextMatchId(),
+            stage: 'group',
+            groupId,
+            teamA: pair[0],
+            teamB: pair[1],
+            table: tableIdx,
+            winner: null,
+          });
+        }
+      }
+    }
+  }
+
   return matches;
 }
 
@@ -173,31 +231,90 @@ export function isGroupStageComplete(matches) {
 
 // ─── Get next unplayed matches ──────────────────────────────────────
 export function getNextMatches(matches, tablesCount = 2) {
-  const unplayed = matches.filter(m => m.stage === 'group' && !m.winner);
-  return unplayed.slice(0, tablesCount);
+  return getActiveMatches(matches.filter(m => m.stage === 'group'), tablesCount);
 }
 
-// ─── Get current active matches (first unplayed per table or just next N)
+// ─── Get current active matches (conflict-free across tables) ───────
+// Optimizes table scheduling so that no team is scheduled to play on two
+// tables at the same time. If remaining matches all conflict with currently
+// playing teams, only playable non-conflicting matches are activated.
 export function getActiveMatches(matches, tablesCount = 2) {
+  if (!matches || matches.length === 0) return [];
+  const count = Math.max(1, tablesCount || 2);
+
   const unplayed = matches.filter(m => !m.winner);
-  // try to get one per table
-  const byTable = {};
-  const result = [];
-  for (const m of unplayed) {
-    if (!byTable[m.table] && result.length < tablesCount) {
-      byTable[m.table] = true;
-      result.push(m);
+  if (unplayed.length === 0) {
+    const completed = matches.filter(m => m.winner);
+    return completed.slice(-count);
+  }
+
+  const conflictsWith = (m, usedTeams) => {
+    return usedTeams.has(m.teamA) || usedTeams.has(m.teamB);
+  };
+
+  const activeMatches = [];
+  const usedTeams = new Set();
+  const usedMatchIds = new Set();
+  const assignedTables = new Set();
+
+  // Step 1: For each table 1..count, find its earliest scheduled unplayed match.
+  // Order candidates by their index in `unplayed` so earlier matches get priority.
+  const tablePrimaryCandidates = [];
+  for (let t = 1; t <= count; t++) {
+    const m = unplayed.find(match => match.table === t);
+    if (m) {
+      tablePrimaryCandidates.push({ table: t, match: m, index: unplayed.indexOf(m) });
     }
   }
-  // if we still have room, fill from unplayed
-  if (result.length < tablesCount) {
-    for (const m of unplayed) {
-      if (!result.includes(m) && result.length < tablesCount) {
-        result.push(m);
-      }
+
+  tablePrimaryCandidates.sort((a, b) => a.index - b.index);
+
+  for (const { table, match } of tablePrimaryCandidates) {
+    if (!conflictsWith(match, usedTeams) && !usedMatchIds.has(match.id) && !assignedTables.has(table)) {
+      activeMatches.push({ ...match, table });
+      usedTeams.add(match.teamA);
+      usedTeams.add(match.teamB);
+      usedMatchIds.add(match.id);
+      assignedTables.add(table);
     }
   }
-  return result;
+
+  // Step 2: For any tables that still lack an active match,
+  // find the earliest unplayed match (scheduled for this table or any other table)
+  // that does not conflict with already-active teams.
+  for (let t = 1; t <= count; t++) {
+    if (assignedTables.has(t)) continue;
+
+    // First try unplayed matches originally scheduled for table t
+    let nextMatch = unplayed.find(m =>
+      !usedMatchIds.has(m.id) &&
+      m.table === t &&
+      !conflictsWith(m, usedTeams)
+    );
+
+    // If none found for table t, check any unplayed match
+    if (!nextMatch) {
+      nextMatch = unplayed.find(m =>
+        !usedMatchIds.has(m.id) &&
+        !conflictsWith(m, usedTeams)
+      );
+    }
+
+    if (nextMatch) {
+      activeMatches.push({ ...nextMatch, table: t });
+      usedTeams.add(nextMatch.teamA);
+      usedTeams.add(nextMatch.teamB);
+      usedMatchIds.add(nextMatch.id);
+      assignedTables.add(t);
+    }
+  }
+
+  // Step 3: Fallback if all candidates had conflicts and no match was chosen
+  if (activeMatches.length === 0 && unplayed.length > 0) {
+    activeMatches.push({ ...unplayed[0], table: 1 });
+  }
+
+  return activeMatches.sort((a, b) => a.table - b.table);
 }
 
 // ─── Determine which teams advance from groups ──────────────────────
