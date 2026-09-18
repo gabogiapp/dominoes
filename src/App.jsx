@@ -1,4 +1,5 @@
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { TournamentProvider } from './context/TournamentContext';
 import { useAdminStatus } from './utils/storage';
 import Header from './components/Header';
@@ -29,7 +30,7 @@ export default function App() {
 
   return (
     <TournamentProvider>
-      <HashRouter>
+      <BrowserRouter>
         <div className="min-h-screen bg-bone">
           <Header onAdminClick={handleAdminClick} />
 
@@ -54,7 +55,7 @@ export default function App() {
             onClose={() => setShowAdmin(false)}
           />
         </div>
-      </HashRouter>
+      </BrowserRouter>
     </TournamentProvider>
   );
 }
