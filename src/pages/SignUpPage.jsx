@@ -3,9 +3,23 @@ import { ExternalLink, RefreshCw, CheckCircle2, Users, Clock, AlertCircle } from
 import { useTournament } from '../context/TournamentContext';
 import { fetchTeamsFromGoogleSheet } from '../utils/googleSheets';
 
+// Helper to resolve Google Form embed URLs properly
+function getEmbedUrl(url) {
+  if (!url) return '';
+  if (url.includes('forms.gle/2iurkc1sxYMzaka66')) {
+    return 'https://docs.google.com/forms/d/e/1FAIpQLSehI_t1SzQTVH9nIW4rKaWsFa0r0VeXX47tJp4KJoYBDjttbA/viewform?embedded=true';
+  }
+  if (url.includes('docs.google.com/forms')) {
+    if (url.includes('embedded=true')) return url;
+    return url.includes('?') ? `${url}&embedded=true` : `${url}?embedded=true`;
+  }
+  return url;
+}
+
 export default function SignUpPage() {
   const { state } = useTournament();
   const formUrl = state.config?.googleFormUrl || 'https://forms.gle/2iurkc1sxYMzaka66';
+  const embedUrl = getEmbedUrl(formUrl);
   const sheetUrl = state.config?.googleSheetUrl;
 
   const [loading, setLoading] = useState(true);
@@ -45,33 +59,93 @@ export default function SignUpPage() {
         <p className="font-mono text-xs tracking-[0.2em] uppercase text-timber/40 mb-2">
           Team Registration
         </p>
-        <h1 className="font-display text-3xl md:text-4xl font-bold uppercase tracking-wider text-timber mb-3">
+        <h1 className="font-display text-3xl md:text-5xl font-bold uppercase tracking-wider text-timber mb-3">
           Sign Up
         </h1>
         <div className="h-0.5 bg-terra w-16 mx-auto mb-4" />
-        <p className="font-sans text-sm text-timber/60 max-w-md mx-auto mb-4">
+        <p className="font-sans text-sm text-timber/60 max-w-md mx-auto mb-6">
           Register your 2-player team for the tournament. Once your entry fee is verified, your team will appear on the confirmed roster below.
         </p>
+
+        {/* Highlighted Tournament Details Card */}
+        <div className="bg-bone border-2 border-timber/15 rounded-xl p-5 mb-6 text-left shadow-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center sm:text-left">
+            <div className="border-b sm:border-b-0 sm:border-r border-timber/10 pb-3 sm:pb-0 sm:pr-4">
+              <span className="font-mono text-[10px] tracking-wider uppercase text-timber/40 block mb-1">
+                Format
+              </span>
+              <p className="font-display text-base font-bold uppercase text-timber">
+                2v2 Partner Dominoes
+              </p>
+            </div>
+            <div className="border-b sm:border-b-0 sm:border-r border-timber/10 pb-3 sm:pb-0 sm:pr-4">
+              <span className="font-mono text-[10px] tracking-wider uppercase text-timber/40 block mb-1">
+                Entry Fee
+              </span>
+              <p className="font-display text-base font-bold uppercase text-felt">
+                $10 / Player ($20 Team)
+              </p>
+              <span className="font-mono text-[10px] text-timber/50">100% to Cash Prize Pool</span>
+            </div>
+            <div>
+              <span className="font-mono text-[10px] tracking-wider uppercase text-timber/40 block mb-1">
+                Payment (Zelle)
+              </span>
+              <p className="font-display text-sm font-bold text-timber">
+                Gabriele Lisci
+              </p>
+              <p className="font-mono text-xs text-terra font-bold">
+                908-873-7696
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Primary Action Button */}
         <a
           href={formUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 border-2 border-timber bg-terra text-bone text-xs font-bold uppercase tracking-wider rounded shadow hover:bg-terra-light transition-colors"
+          className="inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 border-2 border-timber bg-terra text-bone text-sm md:text-base font-bold uppercase tracking-wider rounded-xl shadow-md hover:bg-terra-light hover:shadow-lg active:scale-98 transition-all"
         >
-          <span>Open Form in New Tab</span>
-          <ExternalLink size={14} />
+          <span>Open Registration Form (Google Forms)</span>
+          <ExternalLink size={18} />
         </a>
+        <p className="font-mono text-[11px] text-timber/40 mt-2">
+          Takes 1 minute · Opens directly in Google Forms
+        </p>
       </div>
 
       {/* Google Form embed */}
       <div className="border-2 border-timber rounded-lg overflow-hidden mb-6 shadow-md bg-white">
         <div className="bg-timber text-bone px-4 py-2.5 flex items-center justify-between">
-          <span className="font-mono text-xs tracking-widest uppercase font-bold">Registration Form</span>
-          <span className="font-mono text-[10px] text-bone/70 uppercase">Official Google Form</span>
+          <span className="font-mono text-xs tracking-widest uppercase font-bold">Embedded Form</span>
+          <a
+            href={formUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-[10px] text-bone/80 hover:text-bone uppercase flex items-center gap-1 underline underline-offset-2"
+          >
+            <span>Open in new tab</span>
+            <ExternalLink size={10} />
+          </a>
+        </div>
+        <div className="bg-bone-dark/30 px-4 py-2 border-b border-timber/10 text-center">
+          <p className="font-mono text-[11px] text-timber/60">
+            Having trouble viewing the form below?{' '}
+            <a
+              href={formUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-terra font-bold underline hover:text-terra-light"
+            >
+              Tap here to open the form directly
+            </a>
+          </p>
         </div>
         <div className="bg-white p-1">
           <iframe
-            src={formUrl}
+            src={embedUrl}
             width="100%"
             height="650"
             frameBorder="0"
@@ -88,7 +162,7 @@ export default function SignUpPage() {
       {/* Notice */}
       <div className="border border-brass/30 rounded-lg p-4 bg-brass/5 text-center mb-8">
         <p className="font-mono text-xs text-timber/70 leading-relaxed">
-          Submit your team above. The organizer will mark your registration as paid once payment is confirmed, adding you to the live roster below.
+          Submit your team above and Zelle your $10/person fee to Gabriele Lisci (908-873-7696). Once verified, your team will appear on the live confirmed roster below!
         </p>
       </div>
 
