@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { Layers, Zap, RefreshCw, Volume2, VolumeX } from 'lucide-react';
+import { Layers, Zap, RefreshCw } from 'lucide-react';
 import DominoCascade from '../components/animations/DominoCascade';
 import DominoSlam from '../components/animations/DominoSlam';
 import DominoShuffle from '../components/animations/DominoShuffle';
-import { useDominoSound, testDominoAudio } from '../utils/dominoAudio';
 
 export default function PlayPage() {
   const [activeTab, setActiveTab] = useState('cascade');
-  const [soundEnabled] = useDominoSound();
 
   const sampleTiles = [
     { top: 6, bottom: 6 },
@@ -148,21 +146,6 @@ export default function PlayPage() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Sound Status & Test Pill */}
-      <div className="flex flex-col items-center justify-center gap-1.5 mt-6 text-center">
-        <button
-          onClick={testDominoAudio}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-timber/15 hover:border-timber/30 bg-bone hover:bg-bone-dark text-timber/70 hover:text-timber font-mono text-xs transition-colors cursor-pointer active:scale-95 shadow-xs"
-          title="Click to test domino clack sound"
-        >
-          {soundEnabled ? <Volume2 size={13} className="text-brass" /> : <VolumeX size={13} className="text-timber/40" />}
-          <span className="font-semibold">{soundEnabled ? 'Domino Sound: On (Tap to test)' : 'Domino Sound: Muted (Tap to unmute & test)'}</span>
-        </button>
-        <span className="text-[10px] font-mono text-timber/40">
-          Tip: If you're on an iPhone, make sure your phone's ring/silent switch is not set to silent.
-        </span>
       </div>
     </div>
   );
