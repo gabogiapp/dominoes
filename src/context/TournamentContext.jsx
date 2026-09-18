@@ -507,9 +507,10 @@ export function TournamentProvider({ children }) {
   }, [mutate]);
 
   const syncWithGoogleSheet = useCallback(async (replace = true) => {
-    const res = await fetchTeamsFromGoogleSheet(_state.config?.googleSheetUrl);
+    const sheetUrl = _state.config?.googleSheetUrl || DEFAULT_CONFIG.googleSheetUrl;
+    const res = await fetchTeamsFromGoogleSheet(sheetUrl);
     if (!res.success) {
-      return { success: false, error: res.error };
+      return { success: false, error: res.error, teams: [], count: 0 };
     }
     if (res.teams.length === 0) {
       return {
@@ -517,6 +518,7 @@ export function TournamentProvider({ children }) {
         count: 0,
         rawCount: res.rawCount,
         missingPaidColumn: res.missingPaidColumn,
+        teams: [],
         message: res.rawCount > 0
           ? `Found ${res.rawCount} submissions, but none marked 'Paid'.`
           : 'No submissions found in Google Sheet.',

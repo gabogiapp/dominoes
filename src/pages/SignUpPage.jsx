@@ -17,10 +17,9 @@ function getEmbedUrl(url) {
 }
 
 export default function SignUpPage() {
-  const { state } = useTournament();
+  const { state, syncWithGoogleSheet } = useTournament();
   const formUrl = state.config?.googleFormUrl || 'https://forms.gle/2iurkc1sxYMzaka66';
   const embedUrl = getEmbedUrl(formUrl);
-  const sheetUrl = state.config?.googleSheetUrl;
 
   const [loading, setLoading] = useState(true);
   const [sheetData, setSheetData] = useState({
@@ -34,23 +33,25 @@ export default function SignUpPage() {
 
   const loadRoster = useCallback(async () => {
     setLoading(true);
-    const res = await fetchTeamsFromGoogleSheet(sheetUrl);
+    const res = await syncWithGoogleSheet(true);
     setSheetData({
       teams: res.teams || [],
       rawCount: res.rawCount || 0,
-      paidCount: res.paidCount || 0,
+      paidCount: res.count || (res.teams ? res.teams.length : 0),
       missingPaidColumn: res.missingPaidColumn || false,
       error: res.error || null,
     });
     setLastUpdated(new Date());
     setLoading(false);
-  }, [sheetUrl]);
+  }, [syncWithGoogleSheet]);
 
   useEffect(() => {
     loadRoster();
   }, [loadRoster]);
 
-  const confirmedTeams = sheetData.teams;
+  const confirmedTeams = (state.teams && state.teams.length > 0 && !state.isDemo)
+    ? state.teams.filter(t => !t.withdrawn)
+    : sheetData.teams;
 
   return (
     <div className="min-h-[calc(100vh-56px)] max-w-3xl mx-auto px-4 py-8 md:py-12">
