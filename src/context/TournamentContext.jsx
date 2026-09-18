@@ -21,6 +21,13 @@ import {
   resetMatchIdCounter,
   resetTeamIdCounter,
   withdrawTeam as engineWithdraw,
+  updateBracketMatchParticipants,
+  swapBracketMatchTeams as engineSwapBracketMatchTeams,
+  swapBracketSlots as engineSwapBracketSlots,
+  swapTeamsBetweenGroups as engineSwapTeamsBetweenGroups,
+  reassignTeamToGroup as engineReassignTeamToGroup,
+  updateGroupMatch as engineUpdateGroupMatch,
+  swapGroupMatchTeams as engineSwapGroupMatchTeams,
 } from '../utils/tournamentEngine';
 import { fetchTeamsFromGoogleSheet } from '../utils/googleSheets';
 
@@ -302,6 +309,93 @@ export function TournamentProvider({ children }) {
     });
   }, [mutate]);
 
+  // ─── Emergency Admin Overrides ────────────────────────────────────
+
+  const updateBracketMatch = useCallback((matchId, updates) => {
+    mutate('Updated bracket match matchup', (s) => {
+      if (!s.bracket) return s;
+      s.bracket = updateBracketMatchParticipants(s.bracket, matchId, updates);
+      // Check if champion needs recalculation
+      const allRounds = s.bracket?.rounds || [];
+      const finalRound = allRounds[allRounds.length - 1];
+      const finalMatch = finalRound?.matches?.[0];
+      if (!finalMatch?.winner) {
+        s.champion = null;
+        if (s.stage === 'finished') s.stage = 'knockout';
+      }
+      return s;
+    });
+  }, [mutate]);
+
+  const swapBracketTeams = useCallback((matchId) => {
+    mutate('Swapped match home/away slots', (s) => {
+      if (!s.bracket) return s;
+      s.bracket = engineSwapBracketMatchTeams(s.bracket, matchId);
+      return s;
+    });
+  }, [mutate]);
+
+  const swapBracketMatchSlots = useCallback((matchId1, slot1, matchId2, slot2) => {
+    mutate('Swapped slots between bracket matches', (s) => {
+      if (!s.bracket) return s;
+      s.bracket = engineSwapBracketSlots(s.bracket, matchId1, slot1, matchId2, slot2);
+      const allRounds = s.bracket?.rounds || [];
+      const finalRound = allRounds[allRounds.length - 1];
+      const finalMatch = finalRound?.matches?.[0];
+      if (!finalMatch?.winner) {
+        s.champion = null;
+        if (s.stage === 'finished') s.stage = 'knockout';
+      }
+      return s;
+    });
+  }, [mutate]);
+
+  const swapTeamsBetweenPools = useCallback((teamIdA, teamIdB) => {
+    const teamA = _state.teams.find(t => t.id === teamIdA);
+    const teamB = _state.teams.find(t => t.id === teamIdB);
+    mutate(`Swapped pools: ${teamA?.name || teamIdA} ⇄ ${teamB?.name || teamIdB}`, (s) => {
+      return engineSwapTeamsBetweenGroups(s, teamIdA, teamIdB);
+    });
+  }, [mutate]);
+
+  const reassignTeamPool = useCallback((teamId, targetGroupId) => {
+    const team = _state.teams.find(t => t.id === teamId);
+    mutate(`Reassigned ${team?.name || 'team'} to Pool ${targetGroupId}`, (s) => {
+      return engineReassignTeamToGroup(s, teamId, targetGroupId);
+    });
+  }, [mutate]);
+
+  const setManualAdvancement = useCallback((groupId, teamIds) => {
+    mutate(`Manual advancement for Pool ${groupId}`, (s) => {
+      if (!s.overrides.manualAdvancement) s.overrides.manualAdvancement = {};
+      s.overrides.manualAdvancement[groupId] = teamIds;
+      return s;
+    });
+  }, [mutate]);
+
+  const clearManualAdvancement = useCallback((groupId) => {
+    mutate(`Cleared manual advancement for Pool ${groupId}`, (s) => {
+      if (s.overrides.manualAdvancement?.[groupId]) {
+        delete s.overrides.manualAdvancement[groupId];
+      }
+      return s;
+    });
+  }, [mutate]);
+
+  const updateGroupMatch = useCallback((matchId, updates) => {
+    mutate('Updated group match', (s) => {
+      s.matches = engineUpdateGroupMatch(s.matches, matchId, updates);
+      return s;
+    });
+  }, [mutate]);
+
+  const swapGroupMatchTeams = useCallback((matchId) => {
+    mutate('Swapped group match positions', (s) => {
+      s.matches = engineSwapGroupMatchTeams(s.matches, matchId);
+      return s;
+    });
+  }, [mutate]);
+
   const undo = useCallback(() => {
     const snapshot = _history.pop();
     if (snapshot) {
@@ -494,6 +588,15 @@ export function TournamentProvider({ children }) {
     resetBracketMatch,
     setChampion,
     setTablesCount,
+    updateBracketMatch,
+    swapBracketTeams,
+    swapBracketMatchSlots,
+    swapTeamsBetweenPools,
+    reassignTeamPool,
+    setManualAdvancement,
+    clearManualAdvancement,
+    updateGroupMatch,
+    swapGroupMatchTeams,
     updateConfig,
     undo,
     resetTournament,

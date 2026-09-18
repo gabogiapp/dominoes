@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Play, RefreshCw,
-  Trophy, Undo2, Users, LayoutGrid, Swords, AlertTriangle, Hash
+  Trophy, Undo2, Users, LayoutGrid, Swords, AlertTriangle, Hash, ShieldAlert
 } from 'lucide-react';
 import { useTournament } from '../../context/TournamentContext';
 import { isGroupStageComplete } from '../../utils/tournamentEngine';
@@ -10,6 +10,7 @@ import { lockAdmin } from '../../utils/storage';
 import TeamManager from './TeamManager';
 import PoolManager from './PoolManager';
 import MatchManager from './MatchManager';
+import OverrideManager from './OverrideManager';
 import UndoDrawer from './UndoDrawer';
 
 export default function AdminToolbar({ isOpen, onClose }) {
@@ -26,6 +27,7 @@ export default function AdminToolbar({ isOpen, onClose }) {
     { id: 'matches', label: 'Matches', icon: Swords },
     { id: 'teams', label: 'Teams', icon: Users },
     { id: 'pools', label: 'Pools', icon: LayoutGrid },
+    { id: 'overrides', label: 'Overrides', icon: ShieldAlert },
     { id: 'undo', label: 'Undo', icon: Undo2 },
     { id: 'settings', label: 'Settings', icon: Hash },
   ];
@@ -155,6 +157,7 @@ export default function AdminToolbar({ isOpen, onClose }) {
               {activeTab === 'matches' && <MatchManager />}
               {activeTab === 'teams' && <TeamManager />}
               {activeTab === 'pools' && <PoolManager />}
+              {activeTab === 'overrides' && <OverrideManager />}
               {activeTab === 'undo' && <UndoDrawer />}
               {activeTab === 'settings' && (
                 <div className="space-y-4">

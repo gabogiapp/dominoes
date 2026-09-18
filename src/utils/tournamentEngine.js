@@ -461,6 +461,228 @@ export function getAllBracketMatches(bracket) {
   return bracket.rounds.flatMap(r => r.matches);
 }
 
+// ─── Emergency Bracket Overrides ────────────────────────────────────
+
+/**
+ * Updates participants (teamA, teamB) or table for a bracket match.
+ * If the current winner is no longer one of the participating teams,
+ * the winner is safely cleared and cleared downstream.
+ */
+export function updateBracketMatchParticipants(bracket, matchId, updates = {}) {
+  if (!bracket || !bracket.rounds) return bracket;
+  const newBracket = JSON.parse(JSON.stringify(bracket));
+
+  for (let ri = 0; ri < newBracket.rounds.length; ri++) {
+    for (let mi = 0; mi < newBracket.rounds[ri].matches.length; mi++) {
+      const m = newBracket.rounds[ri].matches[mi];
+      if (m.id === matchId) {
+        if (updates.teamA !== undefined) m.teamA = updates.teamA;
+        if (updates.teamB !== undefined) m.teamB = updates.teamB;
+        if (updates.table !== undefined) m.table = updates.table;
+
+        // If the current winner is no longer valid, clear it and cascade downstream
+        if (m.winner && m.winner !== m.teamA && m.winner !== m.teamB) {
+          m.winner = null;
+          clearDownstreamSlots(newBracket, ri, mi);
+        }
+        return newBracket;
+      }
+    }
+  }
+  return newBracket;
+}
+
+/**
+ * Swaps teamA and teamB for a bracket match.
+ */
+export function swapBracketMatchTeams(bracket, matchId) {
+  if (!bracket || !bracket.rounds) return bracket;
+  const newBracket = JSON.parse(JSON.stringify(bracket));
+
+  for (let ri = 0; ri < newBracket.rounds.length; ri++) {
+    for (let mi = 0; mi < newBracket.rounds[ri].matches.length; mi++) {
+      const m = newBracket.rounds[ri].matches[mi];
+      if (m.id === matchId) {
+        const temp = m.teamA;
+        m.teamA = m.teamB;
+        m.teamB = temp;
+        return newBracket;
+      }
+    }
+  }
+  return newBracket;
+}
+
+/**
+ * Swaps specific slots between two bracket matches (e.g. swap Match 1's teamB with Match 2's teamB).
+ */
+export function swapBracketSlots(bracket, matchId1, slot1, matchId2, slot2) {
+  if (!bracket || !bracket.rounds) return bracket;
+  const newBracket = JSON.parse(JSON.stringify(bracket));
+
+  let m1 = null, r1 = -1, i1 = -1;
+  let m2 = null, r2 = -1, i2 = -1;
+
+  for (let ri = 0; ri < newBracket.rounds.length; ri++) {
+    for (let mi = 0; mi < newBracket.rounds[ri].matches.length; mi++) {
+      const m = newBracket.rounds[ri].matches[mi];
+      if (m.id === matchId1) { m1 = m; r1 = ri; i1 = mi; }
+      if (m.id === matchId2) { m2 = m; r2 = ri; i2 = mi; }
+    }
+  }
+
+  if (m1 && m2) {
+    const temp = m1[slot1];
+    m1[slot1] = m2[slot2];
+    m2[slot2] = temp;
+
+    if (m1.winner && m1.winner !== m1.teamA && m1.winner !== m1.teamB) {
+      m1.winner = null;
+      clearDownstreamSlots(newBracket, r1, i1);
+    }
+    if (m2.winner && m2.winner !== m2.teamA && m2.winner !== m2.teamB) {
+      m2.winner = null;
+      clearDownstreamSlots(newBracket, r2, i2);
+    }
+  }
+  return newBracket;
+}
+
+// ─── Emergency Group / Pool Overrides ────────────────────────────────
+
+/**
+ * Swaps two teams between their respective groups.
+ * Replaces occurrences in unplayed group matches so existing unplayed matches
+ * correctly transfer to the new pool without disrupting played results.
+ */
+export function swapTeamsBetweenGroups(state, teamIdA, teamIdB) {
+  const newState = JSON.parse(JSON.stringify(state));
+  let groupA = null;
+  let groupB = null;
+
+  for (const gid of Object.keys(newState.groups)) {
+    if (newState.groups[gid].includes(teamIdA)) groupA = gid;
+    if (newState.groups[gid].includes(teamIdB)) groupB = gid;
+  }
+
+  if (!groupA || !groupB || groupA === groupB) return newState;
+
+  // Swap memberships in groups
+  newState.groups[groupA] = newState.groups[groupA].map(id => (id === teamIdA ? teamIdB : id));
+  newState.groups[groupB] = newState.groups[groupB].map(id => (id === teamIdB ? teamIdA : id));
+
+  // Update unplayed group matches
+  if (newState.matches) {
+    newState.matches = newState.matches.map(m => {
+      if (m.stage !== 'group' || m.winner) return m;
+
+      let newTeamA = m.teamA;
+      let newTeamB = m.teamB;
+
+      if (m.teamA === teamIdA) newTeamA = teamIdB;
+      else if (m.teamA === teamIdB) newTeamA = teamIdA;
+
+      if (m.teamB === teamIdA) newTeamB = teamIdB;
+      else if (m.teamB === teamIdB) newTeamB = teamIdA;
+
+      return {
+        ...m,
+        teamA: newTeamA,
+        teamB: newTeamB,
+      };
+    });
+  }
+
+  return newState;
+}
+
+/**
+ * Reassigns a team to a target group.
+ */
+export function reassignTeamToGroup(state, teamId, targetGroupId) {
+  const newState = JSON.parse(JSON.stringify(state));
+  let fromGroup = null;
+
+  for (const gid of Object.keys(newState.groups)) {
+    if (newState.groups[gid].includes(teamId)) {
+      fromGroup = gid;
+      break;
+    }
+  }
+
+  if (!fromGroup || fromGroup === targetGroupId) return newState;
+
+  // Remove from old group, add to target group
+  newState.groups[fromGroup] = newState.groups[fromGroup].filter(id => id !== teamId);
+  if (!newState.groups[targetGroupId]) newState.groups[targetGroupId] = [];
+  if (!newState.groups[targetGroupId].includes(teamId)) {
+    newState.groups[targetGroupId].push(teamId);
+  }
+
+  // Remove unplayed matches for this team in the old group
+  if (newState.matches) {
+    newState.matches = newState.matches.filter(m => {
+      if (m.stage === 'group' && m.groupId === fromGroup && !m.winner && (m.teamA === teamId || m.teamB === teamId)) {
+        return false;
+      }
+      return true;
+    });
+
+    // Add round-robin matches for teamId against unplayed teams in targetGroupId
+    const targetTeams = newState.groups[targetGroupId].filter(id => id !== teamId);
+    let tableIdx = 1;
+    targetTeams.forEach(opponentId => {
+      const exists = newState.matches.some(m =>
+        m.stage === 'group' && m.groupId === targetGroupId &&
+        ((m.teamA === teamId && m.teamB === opponentId) || (m.teamA === opponentId && m.teamB === teamId))
+      );
+      if (!exists) {
+        newState.matches.push({
+          id: nextMatchId(),
+          stage: 'group',
+          groupId: targetGroupId,
+          teamA: teamId,
+          teamB: opponentId,
+          table: tableIdx,
+          winner: null,
+        });
+        tableIdx = (tableIdx % (state.tablesCount || 2)) + 1;
+      }
+    });
+  }
+
+  return newState;
+}
+
+/**
+ * Updates a group match (participants, table, winner).
+ */
+export function updateGroupMatch(matches, matchId, updates = {}) {
+  return matches.map(m => {
+    if (m.id !== matchId) return m;
+    const updated = { ...m };
+    if (updates.teamA !== undefined) updated.teamA = updates.teamA;
+    if (updates.teamB !== undefined) updated.teamB = updates.teamB;
+    if (updates.table !== undefined) updated.table = updates.table;
+    if (updates.winner !== undefined) updated.winner = updates.winner;
+    return updated;
+  });
+}
+
+/**
+ * Swaps teamA and teamB for a group match.
+ */
+export function swapGroupMatchTeams(matches, matchId) {
+  return matches.map(m => {
+    if (m.id !== matchId) return m;
+    return {
+      ...m,
+      teamA: m.teamB,
+      teamB: m.teamA,
+    };
+  });
+}
+
 // ─── Determine status for all teams in a group ──────────────────────
 export function calcGroupStatusMap(groupId, standings, groups, matches, overrides = {}, advanceCount = 2) {
   const statusMap = {};

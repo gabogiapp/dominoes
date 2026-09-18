@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Sliders } from 'lucide-react';
 import { useTournament } from '../context/TournamentContext';
 import { useAdminStatus } from '../utils/storage';
+import BracketMatchEditModal from './admin/BracketMatchEditModal';
 
 // ─── Mobile bracket with round tabs ─────────────────────────────────
 export default function MobileBracket() {
@@ -9,6 +11,7 @@ export default function MobileBracket() {
   const { bracket, teams } = state;
   const isAdmin = useAdminStatus();
   const [activeRound, setActiveRound] = useState(0);
+  const [editingMatch, setEditingMatch] = useState(null);
 
   if (!bracket || !bracket.rounds) {
     return (
@@ -69,11 +72,23 @@ export default function MobileBracket() {
                   <span className="font-mono text-[10px] tracking-widest uppercase text-timber/40">
                     Match {match.matchNum} • Table {match.table}
                   </span>
-                  {match.winner && (
-                    <span className="font-mono text-[10px] tracking-widest uppercase text-felt font-bold">
-                      Completed
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingMatch({ match, roundName: round.name })}
+                        className="text-felt hover:underline font-mono text-[10px] uppercase font-bold flex items-center gap-0.5"
+                        title="Edit Matchup"
+                      >
+                        <Sliders size={10} /> Edit
+                      </button>
+                    )}
+                    {match.winner && (
+                      <span className="font-mono text-[10px] tracking-widest uppercase text-felt font-bold">
+                        Completed
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Team A */}
@@ -165,6 +180,13 @@ export default function MobileBracket() {
           })}
         </motion.div>
       </AnimatePresence>
+
+      <BracketMatchEditModal
+        isOpen={Boolean(editingMatch)}
+        onClose={() => setEditingMatch(null)}
+        match={editingMatch?.match}
+        roundName={editingMatch?.roundName}
+      />
     </div>
   );
 }

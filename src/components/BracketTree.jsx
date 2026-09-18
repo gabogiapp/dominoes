@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Sliders } from 'lucide-react';
 import { useTournament } from '../context/TournamentContext';
 import { useAdminStatus } from '../utils/storage';
+import BracketMatchEditModal from './admin/BracketMatchEditModal';
 
 // ─── Desktop bracket tree ───────────────────────────────────────────
 export default function BracketTree() {
   const { state, recordBracketWinner, resetBracketMatch } = useTournament();
   const { bracket, teams } = state;
   const isAdmin = useAdminStatus();
+  const [editingMatch, setEditingMatch] = useState(null);
 
   if (!bracket || !bracket.rounds) {
     return (
@@ -49,6 +52,20 @@ export default function BracketTree() {
                       isFinal ? 'border-brass' : 'border-timber'
                     } bg-bone`}
                   >
+                    {/* Admin matchup edit bar */}
+                    <div className="bg-timber/5 px-2.5 py-1 flex items-center justify-between border-b border-timber/10 text-[9px] font-mono text-timber/40 uppercase">
+                      <span>M{match.matchNum} • T{match.table}</span>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingMatch({ match, roundName: round.name })}
+                          className="text-felt hover:text-felt-light font-bold flex items-center gap-0.5"
+                          title="Edit Matchup (Who vs Who)"
+                        >
+                          <Sliders size={9} /> Edit
+                        </button>
+                      )}
+                    </div>
                     {/* Match slot A */}
                     <div
                       className={`px-3 py-2.5 border-b border-timber/10 flex items-center justify-between transition-all ${
@@ -139,6 +156,13 @@ export default function BracketTree() {
           </div>
         ))}
       </div>
+
+      <BracketMatchEditModal
+        isOpen={Boolean(editingMatch)}
+        onClose={() => setEditingMatch(null)}
+        match={editingMatch?.match}
+        roundName={editingMatch?.roundName}
+      />
     </div>
   );
 }
