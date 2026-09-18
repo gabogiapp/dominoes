@@ -64,4 +64,31 @@ describe('Google Sheets Live Sync', () => {
     assert.equal(result.teams.length, 0);
     assert.equal(result.missingPaidColumn, true);
   });
+
+  it('safely ignores blank rows with FALSE paid values', () => {
+    const csv = `"Timestamp","Team Name","Team Member 1","Team Member 2","Skill Level","Paid"
+"","","","","","FALSE"
+"","","","","","FALSE"
+"2026/09/18","Gabe & Victor","Gabe","Victor","Expert","TRUE"
+"","","","","","FALSE"`;
+
+    const result = parseTeamsFromCsv(csv);
+    assert.equal(result.rawCount, 1);
+    assert.equal(result.paidCount, 1);
+    assert.equal(result.teams.length, 1);
+    assert.equal(result.teams[0].name, 'Gabe & Victor');
+    assert.equal(result.teams[0].player1, 'Gabe');
+    assert.equal(result.teams[0].player2, 'Victor');
+  });
+
+  it('trims whitespace on team and player names', () => {
+    const csv = `"Timestamp","Team Name","Team Member 1","Team Member 2","Skill Level","Paid"
+"2026/09/18","  Los Tigres  "," Carlos "," Miguel  ","Expert","yes"`;
+
+    const result = parseTeamsFromCsv(csv);
+    assert.equal(result.teams.length, 1);
+    assert.equal(result.teams[0].name, 'Los Tigres');
+    assert.equal(result.teams[0].player1, 'Carlos');
+    assert.equal(result.teams[0].player2, 'Miguel');
+  });
 });

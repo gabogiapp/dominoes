@@ -4,14 +4,22 @@ import { X, ArrowLeftRight, Check, AlertTriangle } from 'lucide-react';
 import { useTournament } from '../../context/TournamentContext';
 
 export default function BracketMatchEditModal({ isOpen, onClose, match, roundName }) {
-  const { state, updateBracketMatch, swapBracketTeams } = useTournament();
+  const { state, updateBracketMatch } = useTournament();
   const { teams } = state;
 
-  if (!isOpen || !match) return null;
+  const [teamA, setTeamA] = useState(match?.teamA || '');
+  const [teamB, setTeamB] = useState(match?.teamB || '');
+  const [table, setTable] = useState(match?.table || 1);
 
-  const [teamA, setTeamA] = useState(match.teamA || '');
-  const [teamB, setTeamB] = useState(match.teamB || '');
-  const [table, setTable] = useState(match.table || 1);
+  React.useEffect(() => {
+    if (match) {
+      setTeamA(match.teamA || '');
+      setTeamB(match.teamB || '');
+      setTable(match.table || 1);
+    }
+  }, [match]);
+
+  if (!isOpen || !match) return null;
 
   const activeTeams = teams.filter(t => !t.withdrawn);
 

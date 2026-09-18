@@ -48,6 +48,7 @@ function buildInitialState(demoOverride) {
         tournamentName: (!saved.config?.tournamentName || saved.config?.tournamentName === "Gabo's Birthday Dominoes Invitational") ? DEFAULT_CONFIG.tournamentName : saved.config.tournamentName,
         eventDate: (!saved.config?.eventDate || saved.config?.eventDate === 'September 2026') ? DEFAULT_CONFIG.eventDate : saved.config.eventDate,
         googleFormUrl: (!saved.config?.googleFormUrl || saved.config?.googleFormUrl === 'https://forms.gle/PLACEHOLDER') ? DEFAULT_CONFIG.googleFormUrl : saved.config.googleFormUrl,
+        googleSheetUrl: (!saved.config?.googleSheetUrl || saved.config?.googleSheetUrl.includes('PLACEHOLDER')) ? DEFAULT_CONFIG.googleSheetUrl : saved.config.googleSheetUrl,
       },
     };
   }
@@ -524,6 +525,7 @@ export function TournamentProvider({ children }) {
 
     mutate(`Synced ${res.teams.length} paid teams from Google Sheet`, (s) => {
       s.isDemo = false;
+      setStorageDemoMode(false);
       if (replace) {
         resetTeamIdCounter([]);
         s.teams = res.teams.map(t => ({
@@ -573,7 +575,7 @@ export function TournamentProvider({ children }) {
   useEffect(() => {
     if (state.isDemo || state.stage !== 'setup') return;
 
-    const sheetUrl = state.config?.googleSheetUrl;
+    const sheetUrl = state.config?.googleSheetUrl || DEFAULT_CONFIG.googleSheetUrl;
     if (!sheetUrl) return;
 
     let isMounted = true;
@@ -581,7 +583,7 @@ export function TournamentProvider({ children }) {
 
     const autoSync = async () => {
       const now = Date.now();
-      if (now - lastSyncTime < 15000) return; // Throttle to 15s
+      if (now - lastSyncTime < 10000) return; // Throttle to 10s
       lastSyncTime = now;
 
       try {
@@ -595,19 +597,19 @@ export function TournamentProvider({ children }) {
             const currentTeams = s.teams || [];
             const isSameCount = currentTeams.length === res.teams.length;
             const isSameTeams = isSameCount && res.teams.every((t, idx) =>
-              currentTeams[idx]?.name.toLowerCase() === t.name.toLowerCase() &&
-              currentTeams[idx]?.player1.toLowerCase() === t.player1.toLowerCase() &&
-              currentTeams[idx]?.player2.toLowerCase() === t.player2.toLowerCase()
+              currentTeams[idx]?.name?.trim().toLowerCase() === t.name?.trim().toLowerCase() &&
+              currentTeams[idx]?.player1?.trim().toLowerCase() === t.player1?.trim().toLowerCase() &&
+              currentTeams[idx]?.player2?.trim().toLowerCase() === t.player2?.trim().toLowerCase()
             );
 
             if (isSameTeams) return s;
 
-            const existingByName = new Map(currentTeams.map(t => [t.name.toLowerCase(), t]));
+            const existingByName = new Map(currentTeams.map(t => [t.name?.trim().toLowerCase(), t]));
 
             const updatedTeams = res.teams.map(t => {
-              const existing = existingByName.get(t.name.toLowerCase());
+              const existing = existingByName.get(t.name?.trim().toLowerCase());
               return {
-                id: existing ? existing.id : nextTeamId(),
+                id: existing ? existing.id : (t.id || nextTeamId()),
                 name: t.name,
                 player1: t.player1,
                 player2: t.player2,
@@ -627,19 +629,27 @@ export function TournamentProvider({ children }) {
       }
     };
 
+    // Run autoSync immediately upon mounting/visiting
     autoSync();
 
+    // Periodically poll every 20 seconds while on setup screen
+    const intervalId = setInterval(() => {
+      if (isMounted) autoSync();
+    }, 20000);
+
+    // Also trigger immediately when user switches back to this browser tab
+    let handleFocus;
     if (typeof window !== 'undefined') {
-      const handleFocus = () => autoSync();
+      handleFocus = () => autoSync();
       window.addEventListener('focus', handleFocus);
-      return () => {
-        isMounted = false;
-        window.removeEventListener('focus', handleFocus);
-      };
     }
 
     return () => {
       isMounted = false;
+      clearInterval(intervalId);
+      if (handleFocus && typeof window !== 'undefined') {
+        window.removeEventListener('focus', handleFocus);
+      }
     };
   }, [state.isDemo, state.stage, state.config?.googleSheetUrl, mutate]);
 
