@@ -86,7 +86,7 @@ export default function PlayPage() {
       </div>
 
       {/* Interactive Play Arena */}
-      <div className="bg-bone border-2 border-timber/15 rounded-3xl p-6 sm:p-10 shadow-sm max-w-3xl mx-auto w-full min-h-[360px] flex flex-col items-center justify-center relative overflow-hidden">
+      <div className="domino-ivory-card border-2 border-timber/15 rounded-3xl p-6 sm:p-10 shadow-md max-w-3xl mx-auto w-full min-h-[360px] flex flex-col items-center justify-center relative overflow-hidden">
         {/* Subtle felt table background pattern */}
         <div
           className="absolute inset-0 opacity-[0.03] pointer-events-none"
