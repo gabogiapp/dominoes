@@ -2,8 +2,8 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bone: #FAF7F2;
-  --color-bone-dark: #EDE7DC;
+  --color-bone: #F7F4EE;
+  --color-bone-dark: #EDE8DF;
   --color-timber: #1E1611;
   --color-timber-light: #3A2A20;
   --color-felt: #1B4332;
@@ -13,9 +13,6 @@
   --color-terra-light: #E8795A;
   --color-brass: #DDA15E;
   --color-brass-light: #E8BA82;
-  --color-teak: #E4D5BF;
-  --color-teak-light: #F2E8D8;
-  --color-teak-dark: #CCAFA0;
 
   --font-display: 'Cinzel', serif;
   --font-sans: 'Outfit', sans-serif;
@@ -36,36 +33,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Subtle tactile texture overlay */
+/* Subtle texture overlay */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.02;
+  opacity: 0.025;
   background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-}
-
-/* Warm Amber Teak Domino Tabletop Surface */
-.domino-tabletop {
-  background-color: #E6D8C4;
-  background-image:
-    /* Ambient Tabletop Spotlight Vignette */
-    radial-gradient(ellipse 95% 75% at 50% 18%, rgba(254, 250, 244, 0.88) 0%, rgba(242, 231, 216, 0.7) 42%, rgba(214, 194, 168, 0.48) 80%, rgba(142, 112, 80, 0.35) 100%),
-    /* Subtle vertical wood plank grain separations */
-    repeating-linear-gradient(90deg, transparent 0, transparent 340px, rgba(82, 52, 26, 0.032) 340px, rgba(82, 52, 26, 0.032) 341px, transparent 341px, transparent 680px),
-    /* Procedural organic wood grain texture */
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 600 600' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='wood'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.015 0.003' numOctaves='4' result='noise'/%3E%3CfeColorMatrix type='matrix' values='0.3 0 0 0 0.1  0 0.25 0 0 0.07  0 0 0.2 0 0.04  0 0 0 0.35 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23wood)' opacity='0.32'/%3E%3C/svg%3E");
-  background-attachment: fixed;
-  background-size: 100% 100%, 680px 100%, 600px 600px;
-}
-
-/* Tactile Domino Ivory Card Styling */
-.domino-ivory-card {
-  background-color: var(--color-bone);
-  border: 1.5px solid rgba(30, 22, 17, 0.13);
-  box-shadow: 0 4px 16px -2px rgba(45, 30, 20, 0.08), 0 1px 3px rgba(45, 30, 20, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 /* Scrollbar */

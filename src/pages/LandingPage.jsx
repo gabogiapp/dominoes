@@ -19,6 +19,14 @@ export default function LandingPage() {
     <div className="min-h-[calc(100vh-56px)] flex flex-col justify-between">
       {/* Main Streamlined Hero Section */}
       <section className="relative overflow-hidden flex-1 flex flex-col items-center justify-center px-4 py-16 md:py-24 text-center">
+        {/* Subtle Felt/Grain Backdrop */}
+        <div
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{
+            backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 24px, #1E1611 24px, #1E1611 25px)`,
+          }}
+        />
+
         <div className="relative max-w-3xl mx-auto w-full">
           {/* Tagline / Subtitle */}
           <div className="flex items-center justify-center gap-2 mb-4 px-2">
@@ -109,7 +117,7 @@ export default function LandingPage() {
       </section>
 
       {/* Streamlined Minimal Footer */}
-      <footer className="py-6 border-t border-timber/10 text-center bg-transparent px-4">
+      <footer className="py-6 border-t border-timber/10 text-center bg-bone px-4">
         <p className="font-mono text-[10px] sm:text-xs tracking-wider uppercase text-timber/40">
           Bodega Social Club · Dominoes Invitational Tournament
         </p>

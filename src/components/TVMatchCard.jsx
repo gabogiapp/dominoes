@@ -15,7 +15,7 @@ export default function TVMatchCard({ match, isAdmin, onWinner }) {
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="border-2 border-timber bg-bone rounded-lg overflow-hidden shadow-md"
+      className="border-2 border-timber bg-bone rounded-lg overflow-hidden"
     >
       {/* Table label */}
       <div className="bg-felt text-bone px-4 py-1.5 flex items-center justify-between">

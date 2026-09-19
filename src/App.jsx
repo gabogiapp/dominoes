@@ -82,14 +82,8 @@ export default function App() {
               overflow: isSquashedOrRestoring ? 'hidden' : 'visible',
               pointerEvents: isSquashedOrRestoring ? 'none' : 'auto',
             }}
-            className="min-h-screen domino-tabletop flex flex-col will-change-transform relative"
+            className="min-h-screen bg-bone flex flex-col will-change-transform"
           >
-            {/* Handcrafted Domino Table Brass Corner Accents */}
-            <div className="pointer-events-none absolute top-16 left-3 w-5 h-5 border-t-2 border-l-2 border-brass/45 rounded-tl-xs z-30 hidden sm:block" />
-            <div className="pointer-events-none absolute top-16 right-3 w-5 h-5 border-t-2 border-r-2 border-brass/45 rounded-tr-xs z-30 hidden sm:block" />
-            <div className="pointer-events-none absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-brass/45 rounded-bl-xs z-30 hidden sm:block" />
-            <div className="pointer-events-none absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-brass/45 rounded-br-xs z-30 hidden sm:block" />
-
             <Header onAdminClick={handleAdminClick} />
 
             {/* Falling domino effect when switching tabs */}
