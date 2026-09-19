@@ -13,6 +13,7 @@ import BracketPage from './pages/BracketPage';
 import RulesPage from './pages/RulesPage';
 import PlayPage from './pages/PlayPage';
 import DominoTabTransition from './components/animations/DominoTabTransition';
+import TileShowerEffect from './components/animations/TileShowerEffect';
 
 export default function App() {
   const [showPinModal, setShowPinModal] = useState(false);
@@ -36,6 +37,7 @@ export default function App() {
       <BrowserRouter>
         <div className="min-h-screen bg-bone overflow-x-hidden">
           <Header onAdminClick={handleAdminClick} />
+          <TileShowerEffect />
 
           {/* Falling domino effect when switching tabs */}
           <DominoTabTransition>

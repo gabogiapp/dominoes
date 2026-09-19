@@ -8,6 +8,9 @@ import {
   playDominoClack,
   playDominoSlam,
   playDominoShuffle,
+  playTableKnock,
+  playTranqueSound,
+  playCapicuaSound,
 } from '../src/utils/dominoAudio.js';
 
 describe('Domino Audio Synthesizer', () => {
@@ -39,6 +42,9 @@ describe('Domino Audio Synthesizer', () => {
       playDominoClack(1.0, 0.2);
       playDominoSlam(0.5);
       playDominoShuffle(0.3);
+      playTableKnock(0.4);
+      playTranqueSound(0.5);
+      playCapicuaSound(0.5);
       testDominoAudio();
     });
   });

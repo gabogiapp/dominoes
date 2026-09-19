@@ -6,6 +6,7 @@ import { useAdminStatus } from '../utils/storage';
 import { playDominoClack, useDominoSound, testDominoAudio } from '../utils/dominoAudio';
 import { useTournament } from '../context/TournamentContext';
 import MiniDomino from './MiniDomino';
+import { triggerTileShower } from './animations/TileShowerEffect';
 
 export default function Header({ onAdminClick }) {
   const location = useLocation();
@@ -43,6 +44,25 @@ export default function Header({ onAdminClick }) {
 
   const isActive = (path) => location.pathname === path;
 
+  const logoClicksRef = useRef({ count: 0, lastTime: 0 });
+
+  const handleLogoIconClick = (e) => {
+    e.stopPropagation();
+    const now = Date.now();
+    if (now - logoClicksRef.current.lastTime > 2500) {
+      logoClicksRef.current.count = 0;
+    }
+    logoClicksRef.current.lastTime = now;
+    logoClicksRef.current.count += 1;
+
+    playDominoClack(1.0 + logoClicksRef.current.count * 0.12, 0.25);
+
+    if (logoClicksRef.current.count >= 5) {
+      logoClicksRef.current.count = 0;
+      triggerTileShower();
+    }
+  };
+
   const handleNavClick = (idx = 0) => {
     playDominoClack(1.15 + (idx % 6) * 0.04, 0.14);
   };
@@ -56,7 +76,11 @@ export default function Header({ onAdminClick }) {
           onClick={() => handleNavClick(0)}
           className="flex items-center gap-2 hover:opacity-85 transition-opacity group"
         >
-          <div className="w-5 h-8 rounded-xs border border-brass bg-bone flex flex-col justify-around py-0.5 items-center shadow-xs group-hover:rotate-6 transition-transform shrink-0">
+          <div
+            onClick={handleLogoIconClick}
+            title="Gabo's Dominoes"
+            className="w-5 h-8 rounded-xs border border-brass bg-bone flex flex-col justify-around py-0.5 items-center shadow-xs group-hover:rotate-6 active:scale-90 transition-transform shrink-0 cursor-pointer"
+          >
             <span className="w-1.5 h-1.5 rounded-full bg-timber" />
             <div className="w-3.5 h-[1px] bg-timber" />
             <span className="w-1.5 h-1.5 rounded-full bg-timber" />

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Layers, Zap, RefreshCw } from 'lucide-react';
+import { Layers, Zap, RefreshCw, Volume2 } from 'lucide-react';
 import DominoCascade from '../components/animations/DominoCascade';
 import DominoSlam from '../components/animations/DominoSlam';
 import DominoShuffle from '../components/animations/DominoShuffle';
+import DominoSoundboard from '../components/animations/DominoSoundboard';
 
 export default function PlayPage() {
   const [activeTab, setActiveTab] = useState('cascade');
@@ -39,11 +40,11 @@ export default function PlayPage() {
       </div>
 
       {/* Mode Selector */}
-      <div className="flex items-center justify-center mb-8 bg-bone-dark/50 p-2 rounded-2xl border border-timber/10 max-w-md mx-auto shadow-xs">
-        <div className="grid grid-cols-3 gap-1.5 w-full">
+      <div className="flex items-center justify-center mb-8 bg-bone-dark/50 p-2 rounded-2xl border border-timber/10 max-w-lg mx-auto shadow-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 w-full">
           <button
             onClick={() => setActiveTab('cascade')}
-            className={`px-3.5 py-2 rounded-xl font-mono text-xs tracking-wider uppercase font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-2 rounded-xl font-mono text-xs tracking-wider uppercase font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'cascade'
                 ? 'bg-timber text-bone shadow-sm'
                 : 'text-timber/70 hover:text-timber hover:bg-timber/5'
@@ -53,7 +54,7 @@ export default function PlayPage() {
           </button>
           <button
             onClick={() => setActiveTab('slam')}
-            className={`px-3.5 py-2 rounded-xl font-mono text-xs tracking-wider uppercase font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-2 rounded-xl font-mono text-xs tracking-wider uppercase font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'slam'
                 ? 'bg-terra text-bone shadow-sm'
                 : 'text-timber/70 hover:text-timber hover:bg-timber/5'
@@ -63,13 +64,23 @@ export default function PlayPage() {
           </button>
           <button
             onClick={() => setActiveTab('shuffle')}
-            className={`px-3.5 py-2 rounded-xl font-mono text-xs tracking-wider uppercase font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-2 rounded-xl font-mono text-xs tracking-wider uppercase font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'shuffle'
                 ? 'bg-felt text-bone shadow-sm'
                 : 'text-timber/70 hover:text-timber hover:bg-timber/5'
             }`}
           >
             <RefreshCw size={13} /> Shuffle
+          </button>
+          <button
+            onClick={() => setActiveTab('soundboard')}
+            className={`px-3 py-2 rounded-xl font-mono text-xs tracking-wider uppercase font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              activeTab === 'soundboard'
+                ? 'bg-brass text-timber shadow-sm font-bold'
+                : 'text-timber/70 hover:text-timber hover:bg-timber/5'
+            }`}
+          >
+            <Volume2 size={13} /> Soundboard
           </button>
         </div>
       </div>
@@ -144,6 +155,13 @@ export default function PlayPage() {
             <div className="py-4 flex justify-center">
               <DominoShuffle size="md" isInteractive={true} label="Dar Agua (Shuffle)" />
             </div>
+          </div>
+        )}
+
+        {/* Mode 4: Bodega Soundboard */}
+        {activeTab === 'soundboard' && (
+          <div className="w-full">
+            <DominoSoundboard />
           </div>
         )}
       </div>

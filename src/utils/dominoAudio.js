@@ -352,3 +352,76 @@ export function testDominoAudio() {
   }, 90);
 }
 
+/**
+ * Authentic wooden table double-knock ("¡Paso!")
+ * Two rapid knuckle raps on wood when a player cannot make a move.
+ */
+export function playTableKnock(volume = 0.45) {
+  const knockOnce = (delayMs = 0) => {
+    setTimeout(() => {
+      withAudio((ctx, out, now) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.04);
+
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(540, now);
+        filter.Q.setValueAtTime(2.5, now);
+
+        gain.gain.setValueAtTime(volume * 0.8, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(out);
+
+        osc.start(now);
+        osc.stop(now + 0.05);
+      });
+    }, delayMs);
+  };
+
+  knockOnce(0);
+  knockOnce(95);
+}
+
+/**
+ * Dramatic game lock sound ("¡Tranque!")
+ * Three rising clacks followed by a locked wooden snap.
+ */
+export function playTranqueSound(volume = 0.5) {
+  playDominoClack(0.9, volume * 0.5);
+  setTimeout(() => playDominoClack(1.1, volume * 0.6), 70);
+  setTimeout(() => playDominoClack(1.3, volume * 0.7), 140);
+  setTimeout(() => playDominoSlam(volume * 0.85), 220);
+}
+
+/**
+ * Celebratory Capicúa fanfare ("¡Capicúa!")
+ * Bright dual-tone acrylic victory chime.
+ */
+export function playCapicuaSound(volume = 0.5) {
+  playDominoClack(1.35, volume * 0.8);
+  setTimeout(() => playDominoClack(1.55, volume * 0.9), 85);
+  setTimeout(() => {
+    withAudio((ctx, out, now) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(1320, now + 0.2);
+      gain.gain.setValueAtTime(volume * 0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+      osc.connect(gain);
+      gain.connect(out);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    });
+  }, 160);
+}
+
+
