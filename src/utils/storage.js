@@ -79,9 +79,9 @@ export function loadState(demoOverride) {
     const legacyRaw = localStorage.getItem('dominoes_tournament');
     if (legacyRaw) {
       const legacy = JSON.parse(legacyRaw);
-      const isDefaultBodega = legacy?.teams?.length === 8 && legacy.teams.some(t => t.name === 'Los Tigres');
+      const isDefaultSeed = legacy?.teams?.length === 8 && legacy.teams.some(t => t.name === 'Los Tigres');
       // Only migrate if user had created custom real teams
-      if (legacy && !isDefaultBodega && legacy.teams?.length > 0) {
+      if (legacy && !isDefaultSeed && legacy.teams?.length > 0) {
         saveState(legacy, false);
         return legacy;
       }

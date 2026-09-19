@@ -42,7 +42,7 @@ export default function DominoFlipCard({
           <DominoTile top={top} bottom={bottom} size={size} />
         </div>
 
-        {/* Back Face (Ebony / Wood with Bodega Diamond) */}
+        {/* Back Face (Ebony / Wood with Brass Diamond) */}
         <div
           className="absolute inset-0"
           style={{

@@ -53,7 +53,7 @@ function buildInitialState(demoOverride) {
     };
   }
 
-  // Demo Mode initial state: Seed with the 8 bodega sample teams
+  // Demo Mode initial state: Seed with the 8 sample teams
   if (isDemo) {
     const teams = DEFAULT_TEAMS.map(t => ({ ...t, withdrawn: false }));
     const rec = recommendGroups(teams.length);

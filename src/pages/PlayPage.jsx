@@ -158,7 +158,7 @@ export default function PlayPage() {
           </div>
         )}
 
-        {/* Mode 4: Bodega Soundboard */}
+        {/* Mode 4: Domino Soundboard */}
         {activeTab === 'soundboard' && (
           <div className="w-full">
             <DominoSoundboard />

@@ -95,7 +95,7 @@ export default function DominoSoundboard() {
           Caribbean Domino Slang & Synthesizer
         </span>
         <h3 className="font-display text-2xl uppercase tracking-wider text-timber font-bold">
-          Bodega Soundboard
+          Domino Soundboard
         </h3>
         <p className="font-sans text-xs text-timber/60 max-w-md mx-auto mt-1">
           Tactile audio buttons for classic domino calls and table rituals, synthesized directly via Web Audio.

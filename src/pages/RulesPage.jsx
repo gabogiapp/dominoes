@@ -11,7 +11,7 @@ export default function RulesPage() {
           <DominoTile top={4} bottom={5} size="sm" />
         </div>
         <p className="font-mono text-xs tracking-[0.3em] uppercase text-timber/40 mb-2">
-          Bodega Social Club
+          Official Tournament Rules
         </p>
         <h1 className="font-display text-3xl md:text-4xl font-bold uppercase tracking-wider text-timber mb-3">
           House Rules

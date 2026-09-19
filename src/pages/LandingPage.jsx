@@ -32,7 +32,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-center gap-2 mb-4 px-2">
             <span className="w-1.5 h-1.5 rounded-full bg-terra shrink-0" />
             <span className="font-mono text-[10px] sm:text-xs tracking-[0.15em] sm:tracking-[0.25em] uppercase text-timber/60 font-semibold">
-              Bodega Social Club Presents
+              Annual Invitational Tournament
             </span>
             <span className="w-1.5 h-1.5 rounded-full bg-terra shrink-0" />
           </div>
@@ -119,7 +119,7 @@ export default function LandingPage() {
       {/* Streamlined Minimal Footer */}
       <footer className="py-6 border-t border-timber/10 text-center bg-bone px-4">
         <p className="font-mono text-[10px] sm:text-xs tracking-wider uppercase text-timber/40">
-          Bodega Social Club · Dominoes Invitational Tournament
+          Dominoes Invitational Tournament
         </p>
       </footer>
     </div>

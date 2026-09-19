@@ -33,7 +33,7 @@ export default function DominoShuffle({ size = 'sm', isInteractive = true, label
         <div className="absolute inset-2 rounded-full border border-felt/10 pointer-events-none" />
         <div className="absolute inset-8 rounded-full border border-dashed border-felt/15 pointer-events-none" />
 
-        {/* Center Bodega emblem */}
+        {/* Center emblem */}
         <div className="absolute text-[10px] font-mono tracking-widest uppercase text-felt/30 font-bold pointer-events-none">
           Boneyard
         </div>

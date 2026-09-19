@@ -85,7 +85,7 @@ export default function DominoTile({
           strokeWidth="0.8"
           strokeDasharray="2 2"
         />
-        {/* Center Bodega Diamond */}
+        {/* Center Brass Diamond */}
         <polygon
           points={`${s / 2},${s - s * 0.2} ${s / 2 + s * 0.18},${s} ${s / 2},${s + s * 0.2} ${s / 2 - s * 0.18},${s}`}
           fill="#DDA15E"

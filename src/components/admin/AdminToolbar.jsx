@@ -263,7 +263,7 @@ export default function AdminToolbar({ isOpen, onClose }) {
                       </div>
                       <p className="font-sans text-[11px] text-timber/60 leading-relaxed">
                         {state.isDemo
-                          ? 'You are in Demo Mode. 8 sample bodega teams and test matches are isolated here so real attendees will never see them. Real registrations stay intact in Live Mode.'
+                          ? 'You are in Demo Mode. 8 sample teams and test matches are isolated here so real attendees will never see them. Real registrations stay intact in Live Mode.'
                           : 'You are in Live Mode. Real attendee registrations and tournament brackets are displayed publicly.'}
                       </p>
                     </div>

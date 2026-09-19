@@ -1,4 +1,4 @@
-// ─── Default demo data — 8 bodega-style teams ──────────────────────
+// ─── Default demo data — 8 sample teams ──────────────────────
 
 let _nextId = 1;
 function tid() { return `team_${_nextId++}`; }
@@ -11,7 +11,7 @@ export const DEFAULT_TEAMS = [
   { id: tid(), name: 'La Familia', player1: 'Abuela', player2: 'Tio' },
   { id: tid(), name: 'Calle Ocho', player1: 'Manny', player2: 'Oscar' },
   { id: tid(), name: 'Los Campeones', player1: 'Ricky', player2: 'Eddie' },
-  { id: tid(), name: 'Bodega Cats', player1: 'Smokey', player2: 'Shadow' },
+  { id: tid(), name: 'San Juan Stars', player1: 'Smokey', player2: 'Shadow' },
 ];
 
 export const DEFAULT_TABLES_COUNT = 2;
