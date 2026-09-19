@@ -4,7 +4,7 @@ import { useTournament } from '../../context/TournamentContext';
 
 export default function TeamManager() {
   const {
-    state, setDemoMode, addTeam, bulkAddTeams, syncWithGoogleSheet, removeTeam, editTeam, withdrawTeam, loadDemoData, clearToRealTournament
+    state, setDemoMode, addTeam, bulkAddTeams, syncWithGoogleSheet, removeTeam, editTeam, withdrawTeam
   } = useTournament();
   const [newName, setNewName] = useState('');
   const [newP1, setNewP1] = useState('');

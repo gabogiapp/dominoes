@@ -49,9 +49,9 @@ export default function SignUpPage() {
     loadRoster();
   }, [loadRoster]);
 
-  const confirmedTeams = (state.teams && state.teams.length > 0 && !state.isDemo)
-    ? state.teams.filter(t => !t.withdrawn)
-    : sheetData.teams;
+  const confirmedTeams = !loading && sheetData.teams !== undefined
+    ? sheetData.teams
+    : ((state.teams && !state.isDemo) ? state.teams.filter(t => !t.withdrawn) : []);
 
   return (
     <div className="min-h-[calc(100vh-56px)] max-w-3xl mx-auto px-4 py-8 md:py-12">

@@ -475,7 +475,7 @@ export function TournamentProvider({ children }) {
     } else {
       clearToRealTournament();
     }
-  }, [_state.isDemo, loadDemoData, clearToRealTournament]);
+  }, [loadDemoData, clearToRealTournament]);
 
   const updateConfig = useCallback((newConfig) => {
     mutate('Updated tournament configuration', (s) => {
@@ -512,25 +512,13 @@ export function TournamentProvider({ children }) {
     if (!res.success) {
       return { success: false, error: res.error, teams: [], count: 0 };
     }
-    if (res.teams.length === 0) {
-      return {
-        success: true,
-        count: 0,
-        rawCount: res.rawCount,
-        missingPaidColumn: res.missingPaidColumn,
-        teams: [],
-        message: res.rawCount > 0
-          ? `Found ${res.rawCount} submissions, but none marked 'Paid'.`
-          : 'No submissions found in Google Sheet.',
-      };
-    }
 
     mutate(`Synced ${res.teams.length} paid teams from Google Sheet`, (s) => {
       s.isDemo = false;
       setStorageDemoMode(false);
       if (replace) {
         resetTeamIdCounter([]);
-        s.teams = res.teams.map(t => ({
+        s.teams = (res.teams || []).map(t => ({
           id: nextTeamId(),
           name: t.name,
           player1: t.player1,
@@ -538,7 +526,7 @@ export function TournamentProvider({ children }) {
           withdrawn: false,
         }));
       } else {
-        for (const t of res.teams) {
+        for (const t of (res.teams || [])) {
           const exists = s.teams.some(existing =>
             existing.name.toLowerCase() === t.name.toLowerCase()
           );
@@ -566,7 +554,11 @@ export function TournamentProvider({ children }) {
       success: true,
       count: res.teams.length,
       rawCount: res.rawCount,
+      missingPaidColumn: res.missingPaidColumn,
       teams: res.teams,
+      message: res.teams.length === 0
+        ? (res.rawCount > 0 ? `Found ${res.rawCount} submissions, but none marked 'Paid'.` : 'Google Sheet is currently empty.')
+        : undefined,
     };
   }, [mutate]);
 
@@ -585,47 +577,54 @@ export function TournamentProvider({ children }) {
 
     const autoSync = async () => {
       const now = Date.now();
-      if (now - lastSyncTime < 10000) return; // Throttle to 10s
+      if (now - lastSyncTime < 5000) return; // Throttle to 5s
       lastSyncTime = now;
 
       try {
         const res = await fetchTeamsFromGoogleSheet(sheetUrl);
         if (!isMounted || !res.success) return;
 
-        if (res.teams && res.teams.length > 0) {
-          mutate('Background auto-sync from Google Sheet', (s) => {
-            if (s.stage !== 'setup' || s.isDemo) return s;
+        mutate('Background auto-sync from Google Sheet', (s) => {
+          if (s.stage !== 'setup' || s.isDemo) return s;
 
-            const currentTeams = s.teams || [];
-            const isSameCount = currentTeams.length === res.teams.length;
-            const isSameTeams = isSameCount && res.teams.every((t, idx) =>
-              currentTeams[idx]?.name?.trim().toLowerCase() === t.name?.trim().toLowerCase() &&
-              currentTeams[idx]?.player1?.trim().toLowerCase() === t.player1?.trim().toLowerCase() &&
-              currentTeams[idx]?.player2?.trim().toLowerCase() === t.player2?.trim().toLowerCase()
-            );
+          const currentTeams = s.teams || [];
+          const resTeams = res.teams || [];
 
-            if (isSameTeams) return s;
+          const isSameCount = currentTeams.length === resTeams.length;
+          const isSameTeams = isSameCount && resTeams.every((t, idx) =>
+            currentTeams[idx]?.name?.trim().toLowerCase() === t.name?.trim().toLowerCase() &&
+            currentTeams[idx]?.player1?.trim().toLowerCase() === t.player1?.trim().toLowerCase() &&
+            currentTeams[idx]?.player2?.trim().toLowerCase() === t.player2?.trim().toLowerCase()
+          );
 
-            const existingByName = new Map(currentTeams.map(t => [t.name?.trim().toLowerCase(), t]));
+          if (isSameTeams) return s;
 
-            const updatedTeams = res.teams.map(t => {
-              const existing = existingByName.get(t.name?.trim().toLowerCase());
-              return {
-                id: existing ? existing.id : (t.id || nextTeamId()),
-                name: t.name,
-                player1: t.player1,
-                player2: t.player2,
-                withdrawn: existing?.withdrawn ?? false,
-              };
-            });
-
-            s.teams = updatedTeams;
-            const active = s.teams.filter(t => !t.withdrawn);
-            const rec = recommendGroups(active.length);
-            s.groups = distributeTeams(active, rec.poolCount);
+          // If sheet has 0 paid teams, clear the roster
+          if (resTeams.length === 0) {
+            s.teams = [];
+            s.groups = {};
             return s;
+          }
+
+          const existingByName = new Map(currentTeams.map(t => [t.name?.trim().toLowerCase(), t]));
+
+          const updatedTeams = resTeams.map(t => {
+            const existing = existingByName.get(t.name?.trim().toLowerCase());
+            return {
+              id: existing ? existing.id : (t.id || nextTeamId()),
+              name: t.name,
+              player1: t.player1,
+              player2: t.player2,
+              withdrawn: existing?.withdrawn ?? false,
+            };
           });
-        }
+
+          s.teams = updatedTeams;
+          const active = s.teams.filter(t => !t.withdrawn);
+          const rec = recommendGroups(active.length);
+          s.groups = distributeTeams(active, rec.poolCount);
+          return s;
+        });
       } catch (err) {
         console.warn('Background sheet auto-sync failed:', err);
       }

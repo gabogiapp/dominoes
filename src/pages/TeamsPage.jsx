@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Search, PlusCircle, UserCheck, Trophy, Sparkles, Filter, RefreshCw } from 'lucide-react';
-import DominoTile from '../components/DominoTile';
+import { Users, Search, PlusCircle, UserCheck, RefreshCw } from 'lucide-react';
 import DominoFlipCard from '../components/animations/DominoFlipCard';
 import { useTournament } from '../context/TournamentContext';
 
@@ -26,12 +25,12 @@ export default function TeamsPage() {
     }
   };
 
-  // Automatically sync on initial mount if roster is empty during setup
+  // Automatically sync on initial mount during setup
   React.useEffect(() => {
-    if (state.stage === 'setup' && state.teams.length === 0 && !state.isDemo) {
+    if (state.stage === 'setup' && !state.isDemo) {
       syncWithGoogleSheet(true);
     }
-  }, [state.stage, state.teams.length, state.isDemo, syncWithGoogleSheet]);
+  }, [state.stage, state.isDemo, syncWithGoogleSheet]);
 
   const activeTeams = useMemo(
     () => state.teams.filter((t) => !t.withdrawn),
