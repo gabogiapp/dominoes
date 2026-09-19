@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit3, UserMinus, X, Check, FileSpreadsheet, Sparkles, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Edit3, UserMinus, X, Check, FileSpreadsheet, Sparkles } from 'lucide-react';
 import { useTournament } from '../../context/TournamentContext';
 
 export default function TeamManager() {
   const {
-    state, setDemoMode, addTeam, bulkAddTeams, syncWithGoogleSheet, removeTeam, editTeam, withdrawTeam
+    state, setDemoMode, addTeam, bulkAddTeams, removeTeam, editTeam, withdrawTeam
   } = useTournament();
   const [newName, setNewName] = useState('');
   const [newP1, setNewP1] = useState('');
@@ -14,8 +14,6 @@ export default function TeamManager() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [bulkText, setBulkText] = useState('');
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncFeedback, setSyncFeedback] = useState(null);
 
   const hasMatches = state.matches.some(m => m.winner);
   const activeTeams = state.teams.filter(t => !t.withdrawn);
@@ -78,33 +76,6 @@ export default function TeamManager() {
     }
   };
 
-  const handleSyncSheet = async () => {
-    setIsSyncing(true);
-    setSyncFeedback(null);
-    try {
-      const res = await syncWithGoogleSheet(true);
-      if (!res.success) {
-        setSyncFeedback({ type: 'error', text: res.error || 'Failed to sync with Google Sheet' });
-      } else if (res.count === 0) {
-        setSyncFeedback({
-          type: 'warning',
-          text: res.rawCount > 0
-            ? `${res.rawCount} team(s) found in sheet, but none marked 'Paid'. Mark 'Paid' as TRUE/YES in Google Sheet.`
-            : 'No submissions found in Google Sheet.',
-        });
-      } else {
-        setSyncFeedback({
-          type: 'success',
-          text: `Synced ${res.count} paid team(s) from Google Sheet!`,
-        });
-      }
-    } catch (err) {
-      setSyncFeedback({ type: 'error', text: err.message || 'Sync error' });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   return (
     <div>
       {/* Header & Mode controls */}
@@ -113,15 +84,6 @@ export default function TeamManager() {
           Teams ({activeTeams.length})
         </h3>
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={handleSyncSheet}
-            disabled={isSyncing}
-            className="px-2 py-1 font-mono text-[10px] tracking-wider uppercase bg-felt/10 hover:bg-felt/20 border border-felt/30 rounded text-felt flex items-center gap-1 transition-colors disabled:opacity-50"
-            title="Fetch paid teams directly from Google Sheet"
-          >
-            <RefreshCw size={11} className={isSyncing ? "animate-spin text-felt" : "text-felt"} />
-            {isSyncing ? 'Syncing...' : 'Sync Sheet'}
-          </button>
           <button
             onClick={() => setShowBulkImport(!showBulkImport)}
             className="px-2 py-1 font-mono text-[10px] tracking-wider uppercase bg-timber/5 hover:bg-timber/10 border border-timber/15 rounded text-timber flex items-center gap-1 transition-colors"
@@ -132,20 +94,6 @@ export default function TeamManager() {
           </button>
         </div>
       </div>
-
-      {/* Sync feedback notification */}
-      {syncFeedback && (
-        <div className={`mb-3 p-2.5 rounded-lg border text-xs font-mono flex items-center justify-between gap-2 ${
-          syncFeedback.type === 'success' ? 'bg-felt/10 border-felt/30 text-felt' :
-          syncFeedback.type === 'warning' ? 'bg-brass/10 border-brass/30 text-timber' :
-          'bg-terra/10 border-terra/30 text-terra'
-        }`}>
-          <span className="leading-tight">{syncFeedback.text}</span>
-          <button onClick={() => setSyncFeedback(null)} className="text-timber/40 hover:text-timber shrink-0">
-            <X size={12} />
-          </button>
-        </div>
-      )}
 
       {/* Mode presets banner */}
       <div className={`mb-4 p-2.5 rounded-lg border flex items-center justify-between gap-2 ${

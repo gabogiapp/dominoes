@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Search, PlusCircle, UserCheck, RefreshCw } from 'lucide-react';
+import { Users, Search, PlusCircle, UserCheck } from 'lucide-react';
 import DominoFlipCard from '../components/animations/DominoFlipCard';
 import { useTournament } from '../context/TournamentContext';
 
@@ -9,21 +9,6 @@ export default function TeamsPage() {
   const { state, syncWithGoogleSheet } = useTournament();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPool, setSelectedPool] = useState('ALL');
-  const [syncing, setSyncing] = useState(false);
-  const [syncFeedback, setSyncFeedback] = useState(null);
-
-  const handleSyncSheet = async () => {
-    setSyncing(true);
-    const res = await syncWithGoogleSheet(true);
-    setSyncing(false);
-    if (res.success) {
-      setSyncFeedback(res.count > 0 ? `Synced ${res.count} team(s)` : (res.rawCount > 0 ? `${res.rawCount} registered, 0 marked Paid` : 'Sheet checked · 0 teams'));
-      setTimeout(() => setSyncFeedback(null), 3500);
-    } else {
-      setSyncFeedback('Sync failed');
-      setTimeout(() => setSyncFeedback(null), 3500);
-    }
-  };
 
   // Automatically sync on initial mount during setup
   React.useEffect(() => {
@@ -94,31 +79,10 @@ export default function TeamsPage() {
           <h1 className="font-display text-3xl md:text-5xl font-bold uppercase tracking-wider text-timber">
             Registered Teams
           </h1>
-          {syncFeedback && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-felt/10 border border-felt/30 rounded text-[11px] font-mono text-felt font-bold"
-            >
-              <span>✓ {syncFeedback}</span>
-            </motion.div>
-          )}
         </div>
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          {state.stage === 'setup' && (
-            <button
-              onClick={handleSyncSheet}
-              disabled={syncing}
-              className="px-3.5 py-3 bg-bone border-2 border-timber/20 hover:border-timber text-timber font-mono text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 transition-all hover:bg-bone-dark shadow-xs disabled:opacity-50 cursor-pointer"
-              title="Pull latest registrations and paid status from Google Sheet"
-            >
-              <RefreshCw size={14} className={syncing ? 'animate-spin text-felt' : 'text-timber/60'} />
-              <span>{syncing ? 'Syncing...' : 'Sync Sheet'}</span>
-            </button>
-          )}
-
           {state.stage === 'setup' && (
             <Link
               to="/signup"
@@ -190,14 +154,6 @@ export default function TeamsPage() {
             >
               <PlusCircle size={16} /> Register Team Now
             </Link>
-            <button
-              onClick={handleSyncSheet}
-              disabled={syncing}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 border-2 border-timber/20 hover:border-timber bg-bone text-timber font-mono text-xs uppercase tracking-wider rounded-lg font-semibold hover:bg-bone-dark transition-all disabled:opacity-50 cursor-pointer"
-            >
-              <RefreshCw size={14} className={syncing ? 'animate-spin text-felt' : 'text-timber/60'} />
-              <span>{syncing ? 'Checking Sheet...' : 'Sync From Sheet'}</span>
-            </button>
           </div>
         </div>
       ) : (

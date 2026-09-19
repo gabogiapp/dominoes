@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ExternalLink, RefreshCw, CheckCircle2, Users, Clock, AlertCircle } from 'lucide-react';
+import { ExternalLink, CheckCircle2, Users, Clock, AlertCircle } from 'lucide-react';
 import { useTournament } from '../context/TournamentContext';
-import { fetchTeamsFromGoogleSheet } from '../utils/googleSheets';
 
 // Helper to resolve Google Form embed URLs properly
 function getEmbedUrl(url) {
@@ -184,22 +183,11 @@ export default function SignUpPage() {
             </h2>
           </div>
 
-          <div className="flex items-center gap-2">
-            {lastUpdated && (
-              <span className="font-mono text-[10px] text-timber/40 hidden sm:inline">
-                Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
-            <button
-              onClick={loadRoster}
-              disabled={loading}
-              className="px-3 py-1.5 border border-timber/20 hover:border-timber/40 bg-bone hover:bg-bone-dark text-timber font-mono text-xs uppercase tracking-wider rounded flex items-center gap-1.5 transition-colors disabled:opacity-50"
-              title="Refresh roster from Google Sheets"
-            >
-              <RefreshCw size={13} className={loading ? 'animate-spin text-felt' : 'text-timber/60'} />
-              <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
-            </button>
-          </div>
+          {lastUpdated && (
+            <span className="font-mono text-[10px] text-timber/40">
+              Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
         </div>
 
         {/* Loading state */}
