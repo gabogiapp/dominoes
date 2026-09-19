@@ -141,30 +141,7 @@ export default function TileShowerEffect({ onSquishStateChange }) {
       className="fixed inset-0 pointer-events-none z-50 overflow-hidden flex items-end justify-center pb-8 sm:pb-12"
       style={{ perspective: '1100px' }}
     >
-      {/* 1. Perspective Floor & Void when squished */}
-      {(animState === 'impact' || animState === 'recoil' || animState === 'scurrying' || animState === 'smoke') && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
-          className="absolute inset-0 pointer-events-none -z-10 flex items-center justify-center overflow-hidden bg-white/30"
-        >
-          {/* Horizon guide line */}
-          <div className="absolute top-[52%] left-0 right-0 h-[1px] bg-slate-200/50" />
 
-          {/* Perspective grid floor receding into deep horizon */}
-          <div
-            className="absolute inset-x-0 bottom-0 h-[48%] opacity-25"
-            style={{
-              backgroundImage: 'linear-gradient(to right, #94A3B8 1px, transparent 1px), linear-gradient(to bottom, #94A3B8 1px, transparent 1px)',
-              backgroundSize: '48px 30px',
-              transform: 'perspective(450px) rotateX(68deg)',
-              transformOrigin: 'bottom center',
-            }}
-          />
-        </motion.div>
-      )}
 
       {/* 2. Impact Radial Shockwave Ring */}
       {animState === 'impact' && (
