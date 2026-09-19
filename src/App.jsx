@@ -15,7 +15,6 @@ import RulesPage from './pages/RulesPage';
 import PlayPage from './pages/PlayPage';
 import DominoTabTransition from './components/animations/DominoTabTransition';
 import TileShowerEffect from './components/animations/TileShowerEffect';
-import DominoTableScene from './components/animations/DominoTableScene';
 
 const pageVariants = {
   idle: {
@@ -73,10 +72,7 @@ export default function App() {
   return (
     <TournamentProvider>
       <BrowserRouter>
-        <div className="min-h-screen bg-[#140E0A] overflow-x-hidden relative">
-          {/* 3D Tournament Domino Table revealed when page squishes */}
-          <DominoTableScene active={isSquashedOrRestoring} />
-
+        <div className="min-h-screen bg-white overflow-x-hidden relative">
           <motion.div
             animate={pageSquishState}
             variants={pageVariants}
@@ -86,7 +82,7 @@ export default function App() {
               overflow: isSquashedOrRestoring ? 'hidden' : 'visible',
               pointerEvents: isSquashedOrRestoring ? 'none' : 'auto',
             }}
-            className="min-h-screen bg-bone flex flex-col will-change-transform relative z-10"
+            className="min-h-screen bg-bone flex flex-col will-change-transform"
           >
             <Header onAdminClick={handleAdminClick} />
 
