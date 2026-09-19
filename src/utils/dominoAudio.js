@@ -424,4 +424,37 @@ export function playCapicuaSound(volume = 0.5) {
   }, 160);
 }
 
+/**
+ * Massive, cinematic domino table crash.
+ * Combines heavy acrylic impact, seismic sub-bass rumble, and wood table shake.
+ */
+export function playGiantDominoCrash(volume = 0.8) {
+  playDominoSlam(volume);
+
+  withAudio((ctx, out, now) => {
+    const subOsc = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(160, now);
+    subOsc.frequency.exponentialRampToValueAtTime(28, now + 0.35);
+
+    subGain.gain.setValueAtTime(volume * 1.3, now);
+    subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+
+    subOsc.connect(subGain);
+    subGain.connect(out);
+    subOsc.start(now);
+    subOsc.stop(now + 0.4);
+
+    setTimeout(() => {
+      playDominoClack(0.7, volume * 0.65);
+      playDominoClack(0.55, volume * 0.5);
+    }, 45);
+    setTimeout(() => {
+      playDominoClack(0.85, volume * 0.4);
+    }, 90);
+  });
+}
+
+
 

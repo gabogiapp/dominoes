@@ -11,6 +11,7 @@ import {
   playTableKnock,
   playTranqueSound,
   playCapicuaSound,
+  playGiantDominoCrash,
 } from '../src/utils/dominoAudio.js';
 
 describe('Domino Audio Synthesizer', () => {
@@ -45,6 +46,7 @@ describe('Domino Audio Synthesizer', () => {
       playTableKnock(0.4);
       playTranqueSound(0.5);
       playCapicuaSound(0.5);
+      playGiantDominoCrash(0.8);
       testDominoAudio();
     });
   });
