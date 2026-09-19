@@ -44,22 +44,28 @@ export default function Header({ onAdminClick }) {
 
   const isActive = (path) => location.pathname === path;
 
-  const logoClicksRef = useRef({ count: 0, lastTime: 0 });
+  const logoClicksRef = useRef({ count: 0, timerId: null });
 
   const handleLogoIconClick = (e) => {
+    e.preventDefault();
     e.stopPropagation();
-    const now = Date.now();
-    if (now - logoClicksRef.current.lastTime > 2500) {
-      logoClicksRef.current.count = 0;
+
+    if (logoClicksRef.current.timerId) {
+      clearTimeout(logoClicksRef.current.timerId);
     }
-    logoClicksRef.current.lastTime = now;
+
     logoClicksRef.current.count += 1;
+    const currentCount = logoClicksRef.current.count;
 
-    playDominoClack(1.0 + logoClicksRef.current.count * 0.12, 0.25);
+    playDominoClack(1.0 + currentCount * 0.14, 0.35);
 
-    if (logoClicksRef.current.count >= 5) {
+    if (currentCount >= 5) {
       logoClicksRef.current.count = 0;
       triggerTileShower();
+    } else {
+      logoClicksRef.current.timerId = setTimeout(() => {
+        logoClicksRef.current.count = 0;
+      }, 3000);
     }
   };
 
@@ -71,24 +77,26 @@ export default function Header({ onAdminClick }) {
     <header className="bg-timber text-bone border-b-2 border-brass sticky top-0 z-50 shadow-md">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between">
         {/* Logo */}
-        <Link
-          to="/"
-          onClick={() => handleNavClick(0)}
-          className="flex items-center gap-2 hover:opacity-85 transition-opacity group"
-        >
-          <div
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
             onClick={handleLogoIconClick}
-            title="Gabo's Dominoes"
-            className="w-5 h-8 rounded-xs border border-brass bg-bone flex flex-col justify-around py-0.5 items-center shadow-xs group-hover:rotate-6 active:scale-90 transition-transform shrink-0 cursor-pointer"
+            title="Gabo's Dominoes (Tap me!)"
+            aria-label="Interactive domino tile"
+            className="w-5 h-8 rounded-xs border border-brass bg-bone flex flex-col justify-around py-0.5 items-center shadow-xs hover:rotate-6 active:scale-85 transition-transform shrink-0 cursor-pointer touch-manipulation select-none"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-timber" />
             <div className="w-3.5 h-[1px] bg-timber" />
             <span className="w-1.5 h-1.5 rounded-full bg-timber" />
-          </div>
-          <span className="text-lg sm:text-xl font-bold font-display tracking-wider text-brass">
+          </button>
+          <Link
+            to="/"
+            onClick={() => handleNavClick(0)}
+            className="text-lg sm:text-xl font-bold font-display tracking-wider text-brass hover:opacity-85 transition-opacity"
+          >
             DOMINOES
-          </span>
-        </Link>
+          </Link>
+        </div>
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1.5">
