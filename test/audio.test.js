@@ -12,6 +12,10 @@ import {
   playTranqueSound,
   playCapicuaSound,
   playGiantDominoCrash,
+  playSpringBoing,
+  playPitterPatter,
+  playPuffSound,
+  playElasticSnap,
 } from '../src/utils/dominoAudio.js';
 
 describe('Domino Audio Synthesizer', () => {
@@ -47,6 +51,10 @@ describe('Domino Audio Synthesizer', () => {
       playTranqueSound(0.5);
       playCapicuaSound(0.5);
       playGiantDominoCrash(0.8);
+      playSpringBoing(0.5);
+      playPitterPatter(5, 20);
+      playPuffSound(0.4);
+      playElasticSnap(0.5);
       testDominoAudio();
     });
   });

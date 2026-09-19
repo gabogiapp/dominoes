@@ -72,7 +72,7 @@ if (typeof window !== 'undefined') {
   const unlockEvents = ['touchstart', 'touchend', 'pointerdown', 'mousedown', 'keydown', 'click'];
   const handleFirstInteraction = () => {
     unlockAudioEngine();
-    if (audioCtx && audioCtx.state === 'running') {
+    if (isUnlocked || (audioCtx && audioCtx.state === 'running')) {
       unlockEvents.forEach((ev) => {
         window.removeEventListener(ev, handleFirstInteraction, { capture: true });
       });
@@ -455,6 +455,85 @@ export function playGiantDominoCrash(volume = 0.8) {
     }, 90);
   });
 }
+
+/**
+ * Cartoon spring boing sound for recoil jump.
+ */
+export function playSpringBoing(volume = 0.45) {
+  withAudio((ctx, out, now) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.exponentialRampToValueAtTime(580, now + 0.28);
+
+    gain.gain.setValueAtTime(volume * 0.7, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+
+    osc.connect(gain);
+    gain.connect(out);
+    osc.start(now);
+    osc.stop(now + 0.35);
+  });
+}
+
+/**
+ * Rapid wooden pitter-patter footsteps for cartoon legs running away.
+ */
+export function playPitterPatter(steps = 12, intervalMs = 55) {
+  for (let i = 0; i < steps; i++) {
+    setTimeout(() => {
+      const pitch = 1.6 + (i % 2) * 0.25 + (i * 0.03);
+      playDominoClack(pitch, 0.18);
+    }, i * intervalMs);
+  }
+}
+
+/**
+ * Subtle cartoon smoke puff / pop.
+ */
+export function playPuffSound(volume = 0.35) {
+  withAudio((ctx, out, now) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(380, now);
+    osc.frequency.exponentialRampToValueAtTime(110, now + 0.08);
+
+    gain.gain.setValueAtTime(volume * 0.6, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+
+    osc.connect(gain);
+    gain.connect(out);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  });
+}
+
+/**
+ * Elastic spring snap when the compressed page uncompresses.
+ */
+export function playElasticSnap(volume = 0.5) {
+  playDominoClack(1.3, volume * 0.6);
+  withAudio((ctx, out, now) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(420, now + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(260, now + 0.25);
+
+    gain.gain.setValueAtTime(volume * 0.8, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+
+    osc.connect(gain);
+    gain.connect(out);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  });
+}
+
 
 
 
