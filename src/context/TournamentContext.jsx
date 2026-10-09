@@ -45,7 +45,7 @@ function buildInitialState(demoOverride) {
       config: {
         ...DEFAULT_CONFIG,
         ...(saved.config || {}),
-        tournamentName: (!saved.config?.tournamentName || saved.config?.tournamentName === "Gabo's Birthday Dominoes Invitational") ? DEFAULT_CONFIG.tournamentName : saved.config.tournamentName,
+        tournamentName: (!saved.config?.tournamentName || saved.config?.tournamentName.toLowerCase().includes('birthday')) ? DEFAULT_CONFIG.tournamentName : saved.config.tournamentName,
         eventDate: (!saved.config?.eventDate || saved.config?.eventDate === 'September 2026') ? DEFAULT_CONFIG.eventDate : saved.config.eventDate,
         googleFormUrl: (!saved.config?.googleFormUrl || saved.config?.googleFormUrl === 'https://forms.gle/PLACEHOLDER') ? DEFAULT_CONFIG.googleFormUrl : saved.config.googleFormUrl,
         googleSheetUrl: (!saved.config?.googleSheetUrl || saved.config?.googleSheetUrl.includes('PLACEHOLDER')) ? DEFAULT_CONFIG.googleSheetUrl : saved.config.googleSheetUrl,

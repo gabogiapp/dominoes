@@ -69,7 +69,7 @@ export default function TournamentPage() {
             <Trophy size={40} className="text-brass" />
           </div>
           <p className="font-mono text-xs tracking-[0.3em] uppercase text-timber/40 mb-3">
-            Birthday Tournament Champion
+            Tournament Champion
           </p>
           <h1 className="font-display text-5xl md:text-6xl font-bold uppercase tracking-wider text-timber mb-3">
             {champion.name}

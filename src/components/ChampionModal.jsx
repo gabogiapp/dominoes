@@ -69,7 +69,7 @@ export default function ChampionModal({ champion, onClose }) {
               transition={{ delay: 0.3 }}
               className="font-mono text-xs tracking-[0.3em] uppercase text-timber/40 mb-3"
             >
-              Birthday Tournament Champion
+              Tournament Champion
             </motion.p>
 
             {/* Team name */}

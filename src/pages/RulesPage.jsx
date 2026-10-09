@@ -33,7 +33,7 @@ export default function RulesPage() {
             <Rule number="2" text="The tournament begins with a Group Stage (Round-Robin). Every team plays every other team in their pool." />
             <Rule number="3" text="The top 2 teams from each pool advance to the Knockout Stage (Single Elimination)." />
             <Rule number="4" text="The Knockout Stage is single elimination. Lose and you're out." />
-            <Rule number="5" text="The final match determines the Birthday Tournament Champion." />
+            <Rule number="5" text="The final match determines the Tournament Champion." />
           </div>
         </section>
 
@@ -79,7 +79,7 @@ export default function RulesPage() {
             <Rule number="1" text="Both team members must be present at the table when their match is called." />
             <Rule number="2" text="If a team does not show up within a reasonable time, the organizer may declare a forfeit." />
             <Rule number="3" text="The organizer's decisions are final." />
-            <Rule number="4" text="Have fun. It's a birthday party." />
+            <Rule number="4" text="Have fun." />
           </div>
         </section>
       </div>
