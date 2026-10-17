@@ -144,8 +144,8 @@ export default function TournamentPage() {
                 );
               }
 
-              // Table slot is currently open / waiting on deck
-              const queuedMatch = matches.find(m =>
+              // Fallback: if an unplayed match exists for this table slot, activate it as playable
+              const nextUnplayed = matches.find(m =>
                 m.stage === 'group' &&
                 !m.winner &&
                 !activeMatches.some(a => a.id === m.id) &&
@@ -156,11 +156,21 @@ export default function TournamentPage() {
                 !activeMatches.some(a => a.id === m.id)
               );
 
+              if (nextUnplayed) {
+                return (
+                  <TVMatchCard
+                    key={nextUnplayed.id}
+                    match={{ ...nextUnplayed, table: tableNum }}
+                    isAdmin={isAdmin}
+                    onWinner={recordWinner}
+                  />
+                );
+              }
+
               return (
                 <TVOpenTableCard
                   key={`table-slot-${tableNum}`}
                   tableNumber={tableNum}
-                  queuedMatch={queuedMatch}
                 />
               );
             })}

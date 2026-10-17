@@ -313,7 +313,31 @@ export function getActiveMatches(matches, tablesCount = 2) {
     }
   }
 
-  // Step 3: Fallback if all candidates had conflicts and no match was chosen
+  // Step 3: For any tables that still lack an active match, activate the table's
+  // next scheduled unplayed match (or any available unplayed match) so all configured
+  // tables are active and playable rather than stuck in a waiting state.
+  for (let t = 1; t <= count; t++) {
+    if (assignedTables.has(t)) continue;
+
+    let nextMatch = unplayed.find(m =>
+      !usedMatchIds.has(m.id) &&
+      m.table === t
+    );
+
+    if (!nextMatch) {
+      nextMatch = unplayed.find(m => !usedMatchIds.has(m.id));
+    }
+
+    if (nextMatch) {
+      activeMatches.push({ ...nextMatch, table: t });
+      usedTeams.add(nextMatch.teamA);
+      usedTeams.add(nextMatch.teamB);
+      usedMatchIds.add(nextMatch.id);
+      assignedTables.add(t);
+    }
+  }
+
+  // Step 4: Fallback if all candidates had conflicts and no match was chosen
   if (activeMatches.length === 0 && unplayed.length > 0) {
     activeMatches.push({ ...unplayed[0], table: 1 });
   }

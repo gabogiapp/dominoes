@@ -21,8 +21,8 @@ export default function TVOpenTableCard({ tableNumber, queuedMatch }) {
           Table {tableNumber}
         </span>
         {queuedMatch ? (
-          <span className="font-mono text-[10px] tracking-widest uppercase px-2 py-0.5 rounded bg-brass/25 text-brass font-bold flex items-center gap-1">
-            <Clock size={10} /> On Deck
+          <span className="font-mono text-[10px] tracking-widest uppercase px-2 py-0.5 rounded bg-felt/20 text-felt-light font-bold flex items-center gap-1">
+            <CheckCircle2 size={10} /> Active
           </span>
         ) : (
           <span className="font-mono text-[10px] tracking-widest uppercase px-2 py-0.5 rounded bg-felt/20 text-felt-light font-bold flex items-center gap-1">
@@ -68,8 +68,8 @@ export default function TVOpenTableCard({ tableNumber, queuedMatch }) {
             </div>
 
             {/* Status note */}
-            <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded bg-timber/5 text-timber/50 font-mono text-[10px] tracking-wider uppercase">
-              <span>Awaiting current round to finish</span>
+            <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded bg-felt/10 text-felt font-mono text-[10px] tracking-wider uppercase font-bold">
+              <span>Table Active • In Rotation</span>
             </div>
           </div>
         ) : (

@@ -164,22 +164,23 @@ describe('Table Scheduling & Concurrent Match Conflict Avoidance', () => {
     assert.ok(!teams.has(active[1].teamA) || active[0].teamA !== active[1].teamA);
   });
 
-  test('getActiveMatches activates only 1 match if all remaining matches share a team', () => {
-    // Only 2 matches left, both involve team_1
+  test('getActiveMatches activates all active tables even when remaining matches share a team so tables can be played on currently', () => {
+    // 2 matches left, both involve team_1
     const matches = [
       { id: 'm_1', stage: 'group', groupId: 'A', teamA: 'team_1', teamB: 'team_2', table: 1, winner: null },
       { id: 'm_2', stage: 'group', groupId: 'A', teamA: 'team_1', teamB: 'team_3', table: 2, winner: null },
     ];
 
     const active = getActiveMatches(matches, 2);
-    // User requirement: "that way it doesn't say that one team has to play two games at the same time. Of course if it's not possible that's fine"
-    // Should NOT schedule team_1 at both Table 1 and Table 2!
-    assert.equal(active.length, 1);
+    // User requirement: "Currently when I have more than 2 teams it says the other tables are waiting. This should not be the case because the tables are active so they can be played on currently"
+    assert.equal(active.length, 2);
     assert.equal(active[0].id, 'm_1');
     assert.equal(active[0].table, 1);
+    assert.equal(active[1].id, 'm_2');
+    assert.equal(active[1].table, 2);
   });
 
-  test('getActiveMatches waits gracefully when single pool table finishes early and all candidates overlap', () => {
+  test('getActiveMatches keeps both tables active and playable when single pool table finishes early', () => {
     const singlePool = [
       { id: 'm_1', stage: 'group', groupId: 'A', teamA: 'A1', teamB: 'A4', table: 1, winner: 'A1' },
       { id: 'm_2', stage: 'group', groupId: 'A', teamA: 'A2', teamB: 'A3', table: 2, winner: null },
@@ -188,13 +189,40 @@ describe('Table Scheduling & Concurrent Match Conflict Avoidance', () => {
     ];
 
     const active = getActiveMatches(singlePool, 2);
-    // m_2 is currently playing on Table 2 ({A2, A3}).
-    // m_3 requires A3 (playing on Table 2).
-    // m_4 requires A2 (playing on Table 2).
-    // So only m_2 can be active without conflict!
-    assert.equal(active.length, 1);
-    assert.equal(active[0].id, 'm_2');
-    assert.equal(active[0].table, 2);
+    // Table 2 is currently playing m_2. Table 1 activates m_3 so both tables are active!
+    assert.equal(active.length, 2);
+    assert.equal(active[0].id, 'm_3');
+    assert.equal(active[0].table, 1);
+    assert.equal(active[1].id, 'm_2');
+    assert.equal(active[1].table, 2);
+  });
+
+  test('getActiveMatches activates both tables when there are 3 teams in a pool', () => {
+    const matches = [
+      { id: 'm_1', stage: 'group', groupId: 'A', teamA: 't2', teamB: 't3', table: 1, winner: null },
+      { id: 'm_2', stage: 'group', groupId: 'A', teamA: 't1', teamB: 't3', table: 2, winner: null },
+      { id: 'm_3', stage: 'group', groupId: 'A', teamA: 't1', teamB: 't2', table: 1, winner: null },
+    ];
+
+    const active = getActiveMatches(matches, 2);
+    assert.equal(active.length, 2);
+    assert.equal(active[0].table, 1);
+    assert.equal(active[1].table, 2);
+  });
+
+  test('getActiveMatches activates all 4 tables when 4 tables are configured', () => {
+    const matches = [
+      { id: 'm_1', stage: 'group', groupId: 'A', teamA: 't1', teamB: 't2', table: 1, winner: null },
+      { id: 'm_2', stage: 'group', groupId: 'A', teamA: 't3', teamB: 't4', table: 2, winner: null },
+      { id: 'm_3', stage: 'group', groupId: 'B', teamA: 't5', teamB: 't6', table: 3, winner: null },
+      { id: 'm_4', stage: 'group', groupId: 'B', teamA: 't7', teamB: 't8', table: 4, winner: null },
+      { id: 'm_5', stage: 'group', groupId: 'A', teamA: 't1', teamB: 't3', table: 1, winner: null },
+    ];
+
+    const active = getActiveMatches(matches, 4);
+    assert.equal(active.length, 4);
+    const tables = active.map(m => m.table);
+    assert.deepEqual(tables, [1, 2, 3, 4]);
   });
 
   test('getActiveMatches returns last completed matches when group stage is fully completed', () => {
