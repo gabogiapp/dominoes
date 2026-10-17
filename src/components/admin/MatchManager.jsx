@@ -3,7 +3,7 @@ import { useTournament } from '../../context/TournamentContext';
 import { getActiveMatches, isGroupStageComplete } from '../../utils/tournamentEngine';
 
 export default function MatchManager() {
-  const { state, recordWinner, resetMatch } = useTournament();
+  const { state, recordWinner, resetMatch, setTablesCount } = useTournament();
   const { matches, teams, stage } = state;
 
   if (stage !== 'groups') {
@@ -20,19 +20,38 @@ export default function MatchManager() {
   const groupMatches = matches.filter(m => m.stage === 'group');
   const playedCount = groupMatches.filter(m => m.winner).length;
   const unplayed = groupMatches.filter(m => !m.winner);
-  const active = getActiveMatches(matches, state.tablesCount);
+  const tablesCount = state.tablesCount || 2;
+  const active = getActiveMatches(matches, tablesCount);
 
   const getTeam = (id) => teams.find(t => t.id === id);
 
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-display text-sm tracking-widest uppercase text-timber/60">
-          Matches
-        </h3>
-        <span className="font-mono text-[10px] text-timber/30">
-          {playedCount} / {groupMatches.length} played
-        </span>
+        <div>
+          <h3 className="font-display text-sm tracking-widest uppercase text-timber/60">
+            Matches
+          </h3>
+          <span className="font-mono text-[10px] text-timber/40">
+            {playedCount} / {groupMatches.length} played
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-[10px] uppercase text-timber/40">Tables:</span>
+          {[1, 2, 3, 4].map(n => (
+            <button
+              key={n}
+              onClick={() => setTablesCount(n)}
+              className={`w-6 h-6 rounded font-mono text-[11px] font-bold flex items-center justify-center transition-colors cursor-pointer ${
+                tablesCount === n
+                  ? 'bg-felt text-bone shadow-xs'
+                  : 'border border-timber/15 text-timber/40 hover:border-timber/30'
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
       </div>
 
       {groupComplete && (

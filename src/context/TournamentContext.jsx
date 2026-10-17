@@ -13,6 +13,7 @@ import { DEFAULT_TEAMS, DEFAULT_TABLES_COUNT, DEFAULT_CONFIG } from '../utils/de
 import {
   distributeTeams,
   generateGroupMatches,
+  rescheduleGroupMatches,
   generateBracket,
   advanceBracketWinner,
   resetBracketMatch as engineResetBracketMatch,
@@ -41,6 +42,7 @@ function buildInitialState(demoOverride) {
     resetTeamIdCounter(saved.teams || []);
     return {
       ...saved,
+      tablesCount: saved.tablesCount || DEFAULT_TABLES_COUNT,
       isDemo,
       config: {
         ...DEFAULT_CONFIG,
@@ -137,6 +139,10 @@ if (typeof window !== 'undefined') {
   window.addEventListener('dominoes_mode_changed', () => {
     _history.clear();
     _state = buildInitialState(isDemoMode());
+    emitChange();
+  });
+
+  window.addEventListener('dominoes_state_updated', () => {
     emitChange();
   });
 }
@@ -261,7 +267,7 @@ export function TournamentProvider({ children }) {
     mutate('Generated knockout bracket', (s) => {
       s.stage = 'knockout';
       resetMatchIdCounter(s.matches);
-      s.bracket = generateBracket(s.groups, s.matches, s.overrides);
+      s.bracket = generateBracket(s.groups, s.matches, s.overrides, s.tablesCount || DEFAULT_TABLES_COUNT);
       return s;
     });
   }, [mutate]);
@@ -306,6 +312,18 @@ export function TournamentProvider({ children }) {
   const setTablesCount = useCallback((count) => {
     mutate(`Set tables to ${count}`, (s) => {
       s.tablesCount = count;
+      if (s.matches && s.matches.length > 0) {
+        s.matches = rescheduleGroupMatches(s.matches, count);
+      }
+      if (s.bracket && s.bracket.rounds) {
+        s.bracket.rounds.forEach(round => {
+          round.matches.forEach((m, idx) => {
+            if (!m.winner) {
+              m.table = (idx % count) + 1;
+            }
+          });
+        });
+      }
       return s;
     });
   }, [mutate]);

@@ -20,7 +20,8 @@ export default function AdminToolbar({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState('matches');
   const [confirmReset, setConfirmReset] = useState(null);
 
-  const { stage, matches, tablesCount, config } = state;
+  const { stage, matches, config } = state;
+  const tablesCount = state.tablesCount || 2;
   const groupComplete = isGroupStageComplete(matches);
 
   const tabs = [

@@ -5,6 +5,7 @@ import { useTournament } from '../context/TournamentContext';
 import { getActiveMatches, isGroupStageComplete } from '../utils/tournamentEngine';
 import TVStandingsTable from '../components/TVStandingsTable';
 import TVMatchCard from '../components/TVMatchCard';
+import TVOpenTableCard from '../components/TVOpenTableCard';
 import { useAdminStatus } from '../utils/storage';
 import { Trophy, PlusCircle } from 'lucide-react';
 
@@ -12,8 +13,10 @@ export default function TournamentPage() {
   const { state, recordWinner } = useTournament();
   const { stage, matches, groups, teams, champion } = state;
   const isAdmin = useAdminStatus();
+  const tablesCount = Math.max(1, state.tablesCount || 2);
+  const tableSlots = Array.from({ length: tablesCount }, (_, i) => i + 1);
   const groupLabels = Object.keys(groups).sort();
-  const activeMatches = getActiveMatches(matches, state.tablesCount);
+  const activeMatches = getActiveMatches(matches, tablesCount);
   const groupComplete = isGroupStageComplete(matches);
 
   // Setup state
@@ -31,7 +34,7 @@ export default function TournamentPage() {
           <div className="h-0.5 bg-terra w-16 mx-auto mb-4" />
           <p className="font-sans text-sm text-timber/60 mb-6">
             {activeTeams.length > 0
-              ? `${activeTeams.length} teams registered · Waiting for tournament to begin`
+              ? `${activeTeams.length} teams registered · ${tablesCount} Active ${tablesCount === 1 ? 'Table' : 'Tables'} · Waiting for tournament to begin`
               : 'Registration is currently open · Be the first team to enter the tournament!'}
           </p>
 
@@ -105,20 +108,62 @@ export default function TournamentPage() {
       </div>
 
       {/* Active matches */}
-      {activeMatches.length > 0 && stage === 'groups' && (
+      {matches.length > 0 && stage === 'groups' && (
         <div className="mb-8">
-          <h2 className="font-mono text-[10px] tracking-[0.2em] uppercase text-timber/30 mb-3 text-center">
-            {activeMatches.some(m => !m.winner) ? 'Now Playing' : 'Recent Results'}
-          </h2>
-          <div className={`grid gap-4 ${activeMatches.length === 1 ? 'max-w-md mx-auto' : 'md:grid-cols-2'}`}>
-            {activeMatches.map(match => (
-              <TVMatchCard
-                key={match.id}
-                match={match}
-                isAdmin={isAdmin}
-                onWinner={recordWinner}
-              />
-            ))}
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-felt" />
+            <h2 className="font-mono text-[10px] tracking-[0.2em] uppercase text-timber/60 font-bold">
+              {activeMatches.some(m => !m.winner)
+                ? `Now Playing · ${tablesCount} ${tablesCount === 1 ? 'Table' : 'Active Tables'}`
+                : `Recent Results · ${tablesCount} ${tablesCount === 1 ? 'Table' : 'Tables'}`}
+            </h2>
+            <span className="w-1.5 h-1.5 rounded-full bg-felt" />
+          </div>
+
+          <div
+            className={
+              tablesCount === 1
+                ? 'max-w-md mx-auto'
+                : tablesCount === 2
+                ? 'grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-4'
+                : tablesCount === 3
+                ? 'grid grid-cols-1 md:grid-cols-3 max-w-6xl mx-auto gap-4'
+                : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 max-w-7xl mx-auto gap-4'
+            }
+          >
+            {tableSlots.map(tableNum => {
+              const activeMatch = activeMatches.find(m => m.table === tableNum);
+              if (activeMatch) {
+                return (
+                  <TVMatchCard
+                    key={activeMatch.id}
+                    match={activeMatch}
+                    isAdmin={isAdmin}
+                    onWinner={recordWinner}
+                  />
+                );
+              }
+
+              // Table slot is currently open / waiting on deck
+              const queuedMatch = matches.find(m =>
+                m.stage === 'group' &&
+                !m.winner &&
+                !activeMatches.some(a => a.id === m.id) &&
+                m.table === tableNum
+              ) || matches.find(m =>
+                m.stage === 'group' &&
+                !m.winner &&
+                !activeMatches.some(a => a.id === m.id)
+              );
+
+              return (
+                <TVOpenTableCard
+                  key={`table-slot-${tableNum}`}
+                  tableNumber={tableNum}
+                  queuedMatch={queuedMatch}
+                />
+              );
+            })}
           </div>
         </div>
       )}
@@ -137,8 +182,8 @@ export default function TournamentPage() {
 
       {/* Match progress */}
       <div className="mt-8 text-center">
-        <p className="font-mono text-[10px] text-timber/20 tracking-widest uppercase">
-          {matches.filter(m => m.stage === 'group' && m.winner).length} / {matches.filter(m => m.stage === 'group').length} group matches played
+        <p className="font-mono text-[10px] text-timber/40 tracking-widest uppercase">
+          {matches.filter(m => m.stage === 'group' && m.winner).length} / {matches.filter(m => m.stage === 'group').length} group matches played · {tablesCount} {tablesCount === 1 ? 'Active Table' : 'Active Tables'}
         </p>
       </div>
     </div>

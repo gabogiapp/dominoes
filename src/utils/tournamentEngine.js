@@ -245,7 +245,11 @@ export function getActiveMatches(matches, tablesCount = 2) {
   const unplayed = matches.filter(m => !m.winner);
   if (unplayed.length === 0) {
     const completed = matches.filter(m => m.winner);
-    return completed.slice(-count);
+    const lastMatches = completed.slice(-count);
+    return lastMatches.map((m, idx) => ({
+      ...m,
+      table: idx + 1,
+    }));
   }
 
   const conflictsWith = (m, usedTeams) => {
@@ -317,6 +321,41 @@ export function getActiveMatches(matches, tablesCount = 2) {
   return activeMatches.sort((a, b) => a.table - b.table);
 }
 
+// ─── Reschedule unplayed matches for a new tables count ──────────────
+export function rescheduleGroupMatches(matches, tablesCount = 2) {
+  if (!matches || matches.length === 0) return [];
+  const count = Math.max(1, tablesCount || 2);
+
+  const hasPlayed = matches.some(m => m.winner);
+  if (!hasPlayed) {
+    return matches.map((m, idx) => ({
+      ...m,
+      table: (idx % count) + 1,
+    }));
+  }
+
+  // When matches are in progress:
+  // Identify currently active matches
+  const activeNow = getActiveMatches(matches, count);
+  const activeTableMap = new Map();
+  activeNow.forEach(m => {
+    if (!m.winner && m.table <= count) {
+      activeTableMap.set(m.id, m.table);
+    }
+  });
+
+  let cursor = 0;
+  return matches.map((m) => {
+    if (m.winner) return m;
+    if (activeTableMap.has(m.id)) {
+      return { ...m, table: activeTableMap.get(m.id) };
+    }
+    const table = (cursor % count) + 1;
+    cursor++;
+    return { ...m, table };
+  });
+}
+
 // ─── Determine which teams advance from groups ──────────────────────
 export function getAdvancingTeams(groups, matches, overrides = {}, advanceCount = 2) {
   const advancing = {};
@@ -334,10 +373,14 @@ export function getAdvancingTeams(groups, matches, overrides = {}, advanceCount 
 }
 
 // ─── Generate knockout bracket ──────────────────────────────────────
-export function generateBracket(groups, matches, overrides = {}) {
+export function generateBracket(groups, matches, overrides = {}, tablesCount = 2) {
+  const count = Math.max(1, tablesCount || 2);
   const groupLabels = Object.keys(groups).sort();
   const poolCount = groupLabels.length;
   const advancing = getAdvancingTeams(groups, matches, overrides);
+
+  const tableForSemi = (idx) => (idx === 0 ? 1 : (2 <= count ? 2 : 1));
+  const tableForQuarter = (idx) => ((idx % count) + 1);
 
   if (poolCount === 1) {
     // top 2 play final directly or top 4 play semis
@@ -348,8 +391,8 @@ export function generateBracket(groups, matches, overrides = {}) {
           {
             name: 'Semifinals',
             matches: [
-              { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 1, teamA: teamIds[0] || null, teamB: teamIds[3] || null, table: 1, winner: null },
-              { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 2, teamA: teamIds[1] || null, teamB: teamIds[2] || null, table: 2, winner: null },
+              { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 1, teamA: teamIds[0] || null, teamB: teamIds[3] || null, table: tableForSemi(0), winner: null },
+              { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 2, teamA: teamIds[1] || null, teamB: teamIds[2] || null, table: tableForSemi(1), winner: null },
             ],
           },
           {
@@ -383,8 +426,8 @@ export function generateBracket(groups, matches, overrides = {}) {
         {
           name: 'Semifinals',
           matches: [
-            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 1, teamA: a[0] || null, teamB: b[1] || null, table: 1, winner: null },
-            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 2, teamA: b[0] || null, teamB: a[1] || null, table: 2, winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 1, teamA: a[0] || null, teamB: b[1] || null, table: tableForSemi(0), winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 2, teamA: b[0] || null, teamB: a[1] || null, table: tableForSemi(1), winner: null },
           ],
         },
         {
@@ -406,17 +449,17 @@ export function generateBracket(groups, matches, overrides = {}) {
         {
           name: 'Quarterfinals',
           matches: [
-            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 1, teamA: a[0] || null, teamB: null, table: 1, winner: null },
-            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 2, teamA: b[0] || null, teamB: c[1] || null, table: 2, winner: null },
-            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 3, teamA: c[0] || null, teamB: null, table: 1, winner: null },
-            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 4, teamA: a[1] || null, teamB: b[1] || null, table: 2, winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 1, teamA: a[0] || null, teamB: null, table: tableForQuarter(0), winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 2, teamA: b[0] || null, teamB: c[1] || null, table: tableForQuarter(1), winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 3, teamA: c[0] || null, teamB: null, table: tableForQuarter(2), winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 4, teamA: a[1] || null, teamB: b[1] || null, table: tableForQuarter(3), winner: null },
           ],
         },
         {
           name: 'Semifinals',
           matches: [
-            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 1, teamA: null, teamB: null, table: 1, winner: null },
-            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 2, teamA: null, teamB: null, table: 2, winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 1, teamA: null, teamB: null, table: tableForSemi(0), winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 2, teamA: null, teamB: null, table: tableForSemi(1), winner: null },
           ],
         },
         {
@@ -440,17 +483,17 @@ export function generateBracket(groups, matches, overrides = {}) {
         {
           name: 'Quarterfinals',
           matches: [
-            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 1, teamA: a[0] || null, teamB: d[1] || null, table: 1, winner: null },
-            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 2, teamA: b[0] || null, teamB: c[1] || null, table: 2, winner: null },
-            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 3, teamA: c[0] || null, teamB: b[1] || null, table: 1, winner: null },
-            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 4, teamA: d[0] || null, teamB: a[1] || null, table: 2, winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 1, teamA: a[0] || null, teamB: d[1] || null, table: tableForQuarter(0), winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 2, teamA: b[0] || null, teamB: c[1] || null, table: tableForQuarter(1), winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 3, teamA: c[0] || null, teamB: b[1] || null, table: tableForQuarter(2), winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 4, teamA: d[0] || null, teamB: a[1] || null, table: tableForQuarter(3), winner: null },
           ],
         },
         {
           name: 'Semifinals',
           matches: [
-            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 1, teamA: null, teamB: null, table: 1, winner: null },
-            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 2, teamA: null, teamB: null, table: 2, winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 1, teamA: null, teamB: null, table: tableForSemi(0), winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 2, teamA: null, teamB: null, table: tableForSemi(1), winner: null },
           ],
         },
         {
@@ -464,7 +507,7 @@ export function generateBracket(groups, matches, overrides = {}) {
   }
 
   // Fallback
-  return generateBracket({ A: groups[groupLabels[0]] || [], B: groups[groupLabels[1]] || [] }, matches, overrides);
+  return generateBracket({ A: groups[groupLabels[0]] || [], B: groups[groupLabels[1]] || [] }, matches, overrides, count);
 }
 
 // ─── Advance winner in bracket ──────────────────────────────────────

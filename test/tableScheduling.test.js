@@ -6,6 +6,7 @@ import {
   generateRoundRobinRounds,
   getActiveMatches,
   getNextMatches,
+  rescheduleGroupMatches,
 } from '../src/utils/tournamentEngine.js';
 
 describe('Table Scheduling & Concurrent Match Conflict Avoidance', () => {
@@ -220,5 +221,66 @@ describe('Table Scheduling & Concurrent Match Conflict Avoidance', () => {
     assert.equal(next.length, 2);
     assert.equal(next[0].id, 'm_1');
     assert.equal(next[1].id, 'm_2');
+  });
+
+  test('rescheduleGroupMatches redistributes unplayed matches when increasing tablesCount to 3 and 4', () => {
+    const groups = {
+      A: ['A1', 'A2', 'A3', 'A4'],
+      B: ['B1', 'B2', 'B3', 'B4'],
+    };
+    // Initially generated with 2 tables
+    let matches = generateGroupMatches(groups, 2);
+    assert.ok(matches.every(m => m.table === 1 || m.table === 2));
+
+    // Increase to 3 tables
+    matches = rescheduleGroupMatches(matches, 3);
+    const tables3 = new Set(matches.map(m => m.table));
+    assert.equal(tables3.size, 3);
+    assert.ok(tables3.has(1) && tables3.has(2) && tables3.has(3));
+
+    // Increase to 4 tables
+    matches = rescheduleGroupMatches(matches, 4);
+    const tables4 = new Set(matches.map(m => m.table));
+    assert.equal(tables4.size, 4);
+    assert.ok(tables4.has(1) && tables4.has(2) && tables4.has(3) && tables4.has(4));
+  });
+
+  test('rescheduleGroupMatches preserves completed match tables while redistributing remaining matches', () => {
+    const matches = [
+      { id: 'm_1', stage: 'group', groupId: 'A', teamA: 'A1', teamB: 'A2', table: 1, winner: 'A1' },
+      { id: 'm_2', stage: 'group', groupId: 'B', teamA: 'B1', teamB: 'B2', table: 2, winner: null },
+      { id: 'm_3', stage: 'group', groupId: 'A', teamA: 'A3', teamB: 'A4', table: 1, winner: null },
+      { id: 'm_4', stage: 'group', groupId: 'B', teamA: 'B3', teamB: 'B4', table: 2, winner: null },
+    ];
+
+    const rescheduled = rescheduleGroupMatches(matches, 3);
+    // Completed match m_1 retains table 1
+    assert.equal(rescheduled[0].table, 1);
+    assert.equal(rescheduled[0].winner, 'A1');
+
+    // Currently active match m_2 retains table 2
+    assert.equal(rescheduled[1].table, 2);
+
+    // Remaining matches get assigned across active tables
+    const tableSet = new Set(rescheduled.map(m => m.table));
+    assert.ok(tableSet.has(3), 'Table 3 must be assigned to an unplayed match');
+  });
+
+  test('Live tournament scenario with 6 teams in 2 pools utilizes Table 3 after increasing tablesCount', () => {
+    const groups = {
+      A: ['t1', 't3', 't5'],
+      B: ['t2', 't4', 't6'],
+    };
+    let matches = generateGroupMatches(groups, 2);
+
+    // Mid-tournament admin switches to 3 tables
+    matches = rescheduleGroupMatches(matches, 3);
+
+    // Finish match 1
+    matches[0].winner = 't3';
+
+    const active = getActiveMatches(matches, 3);
+    const tablesInUse = active.map(m => m.table);
+    assert.ok(tablesInUse.includes(3), 'Table 3 must be activated when Table 1 finishes');
   });
 });
