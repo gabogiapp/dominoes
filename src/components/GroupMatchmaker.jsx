@@ -271,20 +271,20 @@ export default function GroupMatchmaker() {
     setScoreModal((prev) => ({ ...prev, isOpen: false }));
   };
 
-  // Switch declared winner inside the modal
+  // Switch declared winner inside the modal: winner is locked to 200, loser gets editable score
   const handleSwitchWinner = (newWinnerId) => {
     setScoreModal((prev) => {
-      const curScoreA = Number(prev.scoreA) || 0;
-      const curScoreB = Number(prev.scoreB) || 0;
-      const higher = Math.max(curScoreA, curScoreB, 200);
-      const lower = Math.min(curScoreA, curScoreB, 100);
+      const isCurrentlyWinnerA = prev.declaredWinnerId === prev.teamA?.id;
+      // Get the current loser score so we can preserve it as the new loser score (clamped to 199)
+      const currentLoserScore = isCurrentlyWinnerA ? prev.scoreB : prev.scoreA;
+      const nextLoserScore = currentLoserScore !== '' && currentLoserScore != null ? Math.min(199, Number(currentLoserScore)) : 100;
 
-      const isWinnerA = newWinnerId === prev.teamA.id;
+      const willBeWinnerA = newWinnerId === prev.teamA?.id;
       return {
         ...prev,
         declaredWinnerId: newWinnerId,
-        scoreA: isWinnerA ? higher : lower,
-        scoreB: isWinnerA ? lower : higher,
+        scoreA: willBeWinnerA ? 200 : nextLoserScore,
+        scoreB: willBeWinnerA ? nextLoserScore : 200,
       };
     });
   };
@@ -294,29 +294,25 @@ export default function GroupMatchmaker() {
     const { tableNum, matchId, teamA, teamB, declaredWinnerId, scoreA, scoreB } = scoreModal;
     if (!teamA || !teamB) return;
 
-    const numA = Number(scoreA) || 0;
-    const numB = Number(scoreB) || 0;
-
-    let finalWinnerId = declaredWinnerId;
-    if (!finalWinnerId) {
-      finalWinnerId = numA >= numB ? teamA.id : teamB.id;
-    }
+    const isWinnerA = declaredWinnerId === teamA.id;
+    const numA = isWinnerA ? 200 : (scoreA !== '' && scoreA != null ? Math.min(199, Math.max(0, Number(scoreA))) : 100);
+    const numB = !isWinnerA ? 200 : (scoreB !== '' && scoreB != null ? Math.min(199, Math.max(0, Number(scoreB))) : 100);
 
     if (matchId) {
       updateMatchScore(matchId, {
         scoreA: numA,
         scoreB: numB,
-        winner: finalWinnerId,
+        winner: declaredWinnerId,
       });
       setNotice({
         type: 'success',
         message: `Updated scores: ${teamA.name} ${numA} – ${numB} ${teamB.name}`,
       });
     } else {
-      recordOpenMatch(tableNum, numA, numB, finalWinnerId);
+      recordOpenMatch(tableNum, numA, numB, declaredWinnerId, teamA.id, teamB.id);
       setNotice({
         type: 'success',
-        message: `Match recorded: ${teamA.name} ${numA} – ${numB} ${teamB.name}. Table ${tableNum} is now free!`,
+        message: `Result submitted: ${teamA.name} ${numA} – ${numB} ${teamB.name}. Table ${tableNum} is now free!`,
       });
     }
 
@@ -1075,34 +1071,33 @@ export default function GroupMatchmaker() {
 
                 {/* Winner Declaration Banner */}
                 <div className="bg-felt/10 border border-felt/20 rounded-xl p-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <CheckCircle2 size={16} className="text-felt shrink-0" />
-                    <div>
+                    <div className="min-w-0">
                       <span className="text-[9px] font-mono uppercase tracking-wider text-timber/50 block font-bold">
                         Winner Declared:
                       </span>
-                      <span className="font-display text-sm font-bold uppercase text-felt">
+                      <span className="font-display text-sm font-bold uppercase text-felt truncate block">
                         {modalWinnerObj?.name}
                       </span>
                     </div>
                   </div>
 
-                  {/* Switch winner toggle button */}
+                  {/* Sleek switch winner pill toggle */}
                   <button
-                    onClick={() =>
-                      handleSwitchWinner(
-                        scoreModal.declaredWinnerId === scoreModal.teamA?.id
-                          ? scoreModal.teamB?.id
-                          : scoreModal.teamA?.id
-                      )
-                    }
-                    className="text-[10px] font-mono text-timber/70 hover:text-felt underline cursor-pointer shrink-0"
+                    type="button"
+                    onClick={() => handleSwitchWinner(modalLoserObj?.id)}
+                    className="group flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-bone border border-timber/25 hover:border-felt hover:bg-felt/10 text-timber hover:text-felt transition-all shadow-2xs active:scale-95 cursor-pointer shrink-0"
+                    title={`Switch declared winner to ${modalLoserObj?.name}`}
                   >
-                    Switch to {modalLoserObj?.name} ⇄
+                    <ArrowRightLeft size={13} className="text-brass group-hover:rotate-180 transition-transform duration-300 shrink-0" />
+                    <span className="font-mono text-[11px] font-semibold tracking-wide">
+                      Switch to <span className="font-display font-bold uppercase underline decoration-timber/40 group-hover:decoration-felt">{modalLoserObj?.name}</span>
+                    </span>
                   </button>
                 </div>
 
-                {/* Score Input Fields */}
+                {/* Score Input Fields: Winner Locked to 200, Loser Editable (0-199) */}
                 <div className="grid grid-cols-2 gap-3">
                   {/* Team A Card */}
                   <div
@@ -1123,16 +1118,42 @@ export default function GroupMatchmaker() {
                       )}
                     </div>
 
-                    <input
-                      type="number"
-                      min="0"
-                      max="999"
-                      value={scoreModal.scoreA}
-                      onChange={(e) =>
-                        setScoreModal((prev) => ({ ...prev, scoreA: e.target.value }))
-                      }
-                      className="w-full bg-bone border-2 border-timber/25 focus:border-felt rounded-lg py-1.5 font-mono text-2xl font-bold text-center text-timber focus:outline-none"
-                    />
+                    {scoreModal.declaredWinnerId === scoreModal.teamA?.id ? (
+                      <div>
+                        <input
+                          type="text"
+                          readOnly
+                          value="200"
+                          className="w-full bg-felt/10 border-2 border-felt/40 rounded-lg py-1.5 font-mono text-2xl font-bold text-center text-felt cursor-not-allowed select-none"
+                        />
+                        <span className="block font-mono text-[9px] text-felt font-bold uppercase tracking-wider mt-1">
+                          Locked Win Score (200)
+                        </span>
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          type="number"
+                          min="0"
+                          max="199"
+                          placeholder="0-199"
+                          value={scoreModal.scoreA}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            if (raw === '') {
+                              setScoreModal((prev) => ({ ...prev, scoreA: '' }));
+                              return;
+                            }
+                            const clamped = Math.min(199, Math.max(0, Number(raw)));
+                            setScoreModal((prev) => ({ ...prev, scoreA: clamped }));
+                          }}
+                          className="w-full bg-bone border-2 border-timber/25 focus:border-felt rounded-lg py-1.5 font-mono text-2xl font-bold text-center text-timber focus:outline-none"
+                        />
+                        <span className="block font-mono text-[9px] text-timber/50 font-semibold uppercase tracking-wider mt-1">
+                          Points Scored (0–199)
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Team B Card */}
@@ -1154,16 +1175,42 @@ export default function GroupMatchmaker() {
                       )}
                     </div>
 
-                    <input
-                      type="number"
-                      min="0"
-                      max="999"
-                      value={scoreModal.scoreB}
-                      onChange={(e) =>
-                        setScoreModal((prev) => ({ ...prev, scoreB: e.target.value }))
-                      }
-                      className="w-full bg-bone border-2 border-timber/25 focus:border-felt rounded-lg py-1.5 font-mono text-2xl font-bold text-center text-timber focus:outline-none"
-                    />
+                    {scoreModal.declaredWinnerId === scoreModal.teamB?.id ? (
+                      <div>
+                        <input
+                          type="text"
+                          readOnly
+                          value="200"
+                          className="w-full bg-felt/10 border-2 border-felt/40 rounded-lg py-1.5 font-mono text-2xl font-bold text-center text-felt cursor-not-allowed select-none"
+                        />
+                        <span className="block font-mono text-[9px] text-felt font-bold uppercase tracking-wider mt-1">
+                          Locked Win Score (200)
+                        </span>
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          type="number"
+                          min="0"
+                          max="199"
+                          placeholder="0-199"
+                          value={scoreModal.scoreB}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            if (raw === '') {
+                              setScoreModal((prev) => ({ ...prev, scoreB: '' }));
+                              return;
+                            }
+                            const clamped = Math.min(199, Math.max(0, Number(raw)));
+                            setScoreModal((prev) => ({ ...prev, scoreB: clamped }));
+                          }}
+                          className="w-full bg-bone border-2 border-timber/25 focus:border-felt rounded-lg py-1.5 font-mono text-2xl font-bold text-center text-timber focus:outline-none"
+                        />
+                        <span className="block font-mono text-[9px] text-timber/50 font-semibold uppercase tracking-wider mt-1">
+                          Points Scored (0–199)
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1200,10 +1247,10 @@ export default function GroupMatchmaker() {
                 <button
                   type="button"
                   onClick={handleSubmitModalScores}
-                  className="px-4 py-2 bg-felt text-bone font-display text-xs uppercase tracking-wider font-bold rounded-xl hover:bg-felt-light shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2 bg-felt text-bone font-display text-xs uppercase tracking-wider font-bold rounded-xl hover:bg-felt-light shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
-                  <CheckCircle2 size={15} className="text-brass" />
-                  <span>Save Scores</span>
+                  <CheckCircle2 size={16} className="text-brass" />
+                  <span>Submit</span>
                 </button>
               </div>
             </motion.div>

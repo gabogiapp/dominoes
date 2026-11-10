@@ -409,34 +409,39 @@ export function TournamentProvider({ children }) {
     });
   }, [mutate]);
 
-  const recordOpenMatch = useCallback((tableNum, scoreA, scoreB, winnerId) => {
-    const active = _state.activeTables?.[tableNum];
-    if (!active || !active.teamA || !active.teamB) return;
+  const recordOpenMatch = useCallback((tableNum, scoreA, scoreB, winnerId, directTeamA, directTeamB) => {
+    const tNum = Number(tableNum);
+    const active = _state.activeTables?.[tNum] || _state.activeTables?.[String(tNum)] || _state.activeTables?.[tableNum] || {};
+    const teamAId = directTeamA || active.teamA;
+    const teamBId = directTeamB || active.teamB;
 
-    const teamAObj = _state.teams.find(t => t.id === active.teamA);
-    const teamBObj = _state.teams.find(t => t.id === active.teamB);
+    if (!teamAId || !teamBId) return;
+
+    const teamAObj = _state.teams.find(t => t.id === teamAId);
+    const teamBObj = _state.teams.find(t => t.id === teamBId);
 
     mutate(`Completed Table ${tableNum}: ${teamAObj?.name || 'A'} vs ${teamBObj?.name || 'B'}`, (s) => {
-      if (!s.activeTables?.[tableNum]) return s;
-      const currentActive = s.activeTables[tableNum];
-      if (!currentActive.teamA || !currentActive.teamB) return s;
+      if (!s.matches) s.matches = [];
+      if (!s.activeTables) s.activeTables = initActiveTables(s.tablesCount);
 
-      const numA = (scoreA !== '' && scoreA != null) ? Number(scoreA) : null;
-      const numB = (scoreB !== '' && scoreB != null) ? Number(scoreB) : null;
+      const currentActive = s.activeTables[tNum] || s.activeTables[String(tNum)] || s.activeTables[tableNum] || {};
+      const resolvedA = directTeamA || currentActive.teamA || teamAId;
+      const resolvedB = directTeamB || currentActive.teamB || teamBId;
+
+      if (!resolvedA || !resolvedB) return s;
+
+      const numA = (scoreA !== '' && scoreA != null) ? Number(scoreA) : 200;
+      const numB = (scoreB !== '' && scoreB != null) ? Number(scoreB) : 100;
 
       let win = winnerId;
       if (!win) {
-        if (numA != null && numB != null) {
-          win = numA >= numB ? currentActive.teamA : currentActive.teamB;
-        } else {
-          win = currentActive.teamA;
-        }
+        win = numA >= numB ? resolvedA : resolvedB;
       }
 
       let poolId = null;
       if (s.groups) {
         for (const [gid, teamIds] of Object.entries(s.groups)) {
-          if (teamIds.includes(currentActive.teamA)) {
+          if (teamIds.includes(resolvedA)) {
             poolId = gid;
             break;
           }
@@ -449,15 +454,25 @@ export function TournamentProvider({ children }) {
         stage: 'group',
         groupId: poolId || 'A',
         table: Number(tableNum),
-        teamA: currentActive.teamA,
-        teamB: currentActive.teamB,
+        teamA: resolvedA,
+        teamB: resolvedB,
         scoreA: numA,
         scoreB: numB,
         winner: win,
         completedAt: Date.now(),
       });
 
-      s.activeTables[tableNum] = { teamA: null, teamB: null };
+      // Free the table cleanly across all key representations
+      if (s.activeTables[tNum]) s.activeTables[tNum] = { teamA: null, teamB: null };
+      if (s.activeTables[String(tNum)]) s.activeTables[String(tNum)] = { teamA: null, teamB: null };
+      if (s.activeTables[tableNum]) s.activeTables[tableNum] = { teamA: null, teamB: null };
+
+      // Ensure both teams are freed from any other table
+      Object.keys(s.activeTables).forEach(t => {
+        if (s.activeTables[t]?.teamA === resolvedA || s.activeTables[t]?.teamA === resolvedB) s.activeTables[t].teamA = null;
+        if (s.activeTables[t]?.teamB === resolvedA || s.activeTables[t]?.teamB === resolvedB) s.activeTables[t].teamB = null;
+      });
+
       try { playDominoSlam(); } catch {}
       return s;
     });
