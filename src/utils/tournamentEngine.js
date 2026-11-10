@@ -149,7 +149,7 @@ export function calcGroupStandings(groupId, teamIds, matches, overrides = {}) {
     stats[id] = { teamId: id, wins: 0, losses: 0, played: 0, pointsFor: 0, pointsAgainst: 0, diff: 0 };
   });
 
-  const groupMatches = matches.filter(m => m.stage === 'group' && m.groupId === groupId && m.winner);
+  const groupMatches = matches.filter(m => m.stage === 'group' && (m.groupId === groupId || teamIds.includes(m.teamA) || teamIds.includes(m.teamB)) && m.winner);
   groupMatches.forEach(m => {
     const winner = overrides.manualWinner?.[m.id] || m.winner;
     const loserId = winner === m.teamA ? m.teamB : m.teamA;

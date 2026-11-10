@@ -368,24 +368,6 @@ export function TournamentProvider({ children }) {
       const tNum = Number(tableNum);
       if (!s.activeTables[tNum]) s.activeTables[tNum] = { teamA: null, teamB: null };
 
-      // Intra-pool rule: both teams at a table must belong to the exact same group/pool
-      if (s.groups && Object.keys(s.groups).length > 0) {
-        const otherSlot = slot === 'teamA' ? 'teamB' : 'teamA';
-        const otherTeamId = s.activeTables[tNum][otherSlot];
-        if (otherTeamId) {
-          let poolA = null;
-          let poolB = null;
-          for (const [gid, teamIds] of Object.entries(s.groups)) {
-            if (teamIds.includes(teamId)) poolA = gid;
-            if (teamIds.includes(otherTeamId)) poolB = gid;
-          }
-          if (poolA && poolB && poolA !== poolB) {
-            // Cannot pair teams from different pools in group stage
-            return s;
-          }
-        }
-      }
-
       // Ensure this team is unassigned from any other table or slot
       Object.keys(s.activeTables).forEach(t => {
         if (s.activeTables[t].teamA === teamId) s.activeTables[t].teamA = null;

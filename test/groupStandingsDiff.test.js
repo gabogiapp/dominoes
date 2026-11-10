@@ -85,4 +85,37 @@ describe('Group Standings Point Differential (+/-)', () => {
     assert.equal(standings[3].teamId, 'team_2', 'team_2 with -100 diff must be #4');
     assert.equal(standings[3].diff, -100);
   });
+
+  test('Cross-pool matches update standings in both pools accurately', () => {
+    const poolA = ['team_a1', 'team_a2'];
+    const poolB = ['team_b1', 'team_b2'];
+
+    // Cross-pool match: team_a1 (Pool A) plays team_b1 (Pool B)
+    // team_a1 wins 200 to 100 (+100 for a1, -100 for b1)
+    const matches = [
+      {
+        id: 'cross_1',
+        stage: 'group',
+        groupId: 'A',
+        teamA: 'team_a1',
+        teamB: 'team_b1',
+        scoreA: 200,
+        scoreB: 100,
+        winner: 'team_a1',
+      },
+    ];
+
+    const standingsA = calcGroupStandings('A', poolA, matches);
+    const standingsB = calcGroupStandings('B', poolB, matches);
+
+    const a1 = standingsA.find(s => s.teamId === 'team_a1');
+    assert.equal(a1.wins, 1);
+    assert.equal(a1.losses, 0);
+    assert.equal(a1.diff, 100);
+
+    const b1 = standingsB.find(s => s.teamId === 'team_b1');
+    assert.equal(b1.wins, 0);
+    assert.equal(b1.losses, 1);
+    assert.equal(b1.diff, -100);
+  });
 });

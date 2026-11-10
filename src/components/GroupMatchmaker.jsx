@@ -14,7 +14,7 @@ import {
   Trophy,
   BarChart3,
   AlertCircle,
-  Filter,
+  AlertTriangle,
 } from 'lucide-react';
 
 export default function GroupMatchmaker() {
@@ -48,7 +48,7 @@ export default function GroupMatchmaker() {
   // Standby pool filter tab: 'ALL' or specific pool letter e.g. 'A', 'B'
   const [standbyPoolFilter, setStandbyPoolFilter] = useState('ALL');
 
-  // Score submission / edit modal state (simplified: no fast presets)
+  // Score submission / edit modal state
   const [scoreModal, setScoreModal] = useState({
     isOpen: false,
     tableNum: null,
@@ -58,7 +58,8 @@ export default function GroupMatchmaker() {
     declaredWinnerId: null,
     scoreA: 200,
     scoreB: 100,
-    pool: 'A',
+    poolA: 'A',
+    poolB: 'A',
   });
 
   // Standings per group with ranks and diffs
@@ -98,7 +99,7 @@ export default function GroupMatchmaker() {
     return set;
   }, [activeTables]);
 
-  // All standby teams across pools, sorted by fewest games played, then record
+  // All standby teams across pools
   const allStandbyTeams = useMemo(() => {
     const list = [];
     for (const gid of groupLabels) {
@@ -112,7 +113,6 @@ export default function GroupMatchmaker() {
     return list.sort((a, b) => {
       const stA = groupStandingsMap.get(a.id) || { played: 0, wins: 0, diff: 0, pool: 'A' };
       const stB = groupStandingsMap.get(b.id) || { played: 0, wins: 0, diff: 0, pool: 'A' };
-      // Sort by pool letter first if viewing ALL, or by games played
       if (stA.pool !== stB.pool) return stA.pool.localeCompare(stB.pool);
       if (stA.played !== stB.played) return stA.played - stB.played;
       if (stB.wins !== stA.wins) return stB.wins - stA.wins;
@@ -137,7 +137,7 @@ export default function GroupMatchmaker() {
 
   const tableSlots = Array.from({ length: tablesCount }, (_, i) => i + 1);
 
-  // Helper to determine a table's locked pool
+  // Helper to determine a table's initial seated pool
   const getTablePool = (tableNum) => {
     const table = activeTables[tableNum] || {};
     const poolA = table.teamA ? getTeamPool(table.teamA) : null;
@@ -163,7 +163,7 @@ export default function GroupMatchmaker() {
     );
   };
 
-  // Drag & drop handlers
+  // Drag & drop handlers: flexible, warns in red if cross-pool, but allows drop
   const handleDragStart = (e, teamId) => {
     e.dataTransfer.setData('text/plain', teamId);
     e.dataTransfer.effectAllowed = 'move';
@@ -177,20 +177,8 @@ export default function GroupMatchmaker() {
 
   const handleDragOver = (e, tableNum, slot) => {
     e.preventDefault();
-    const tablePool = getTablePool(tableNum);
-    const draggingPool = draggingTeamId ? getTeamPool(draggingTeamId) : null;
-
-    // Reject if table is locked to a different pool
-    if (tablePool && draggingPool && tablePool !== draggingPool) {
-      e.dataTransfer.dropEffect = 'none';
-      const targetKey = `t${tableNum}-${slot}-forbidden`;
-      if (dragOverTarget !== targetKey) {
-        setDragOverTarget(targetKey);
-      }
-      return;
-    }
-
     e.dataTransfer.dropEffect = 'move';
+
     const targetKey = `t${tableNum}-${slot}`;
     if (dragOverTarget !== targetKey) {
       setDragOverTarget(targetKey);
@@ -198,7 +186,7 @@ export default function GroupMatchmaker() {
   };
 
   const handleDragLeave = (targetKey) => {
-    if (dragOverTarget === targetKey || dragOverTarget === `${targetKey}-forbidden`) {
+    if (dragOverTarget === targetKey) {
       setDragOverTarget(null);
     }
   };
@@ -211,21 +199,26 @@ export default function GroupMatchmaker() {
     const teamId = e.dataTransfer.getData('text/plain');
     if (!teamId) return;
 
-    const tablePool = getTablePool(tableNum);
-    const teamPool = getTeamPool(teamId);
+    const table = activeTables[tableNum] || {};
+    const otherSlot = slot === 'teamA' ? 'teamB' : 'teamA';
+    const otherTeamId = table[otherSlot];
 
-    // Intra-pool validation
-    if (tablePool && teamPool && tablePool !== teamPool) {
+    const teamPool = getTeamPool(teamId);
+    const otherPool = otherTeamId ? getTeamPool(otherTeamId) : null;
+
+    assignTableTeam(tableNum, slot, teamId);
+
+    // If seated against a team from another pool, provide an informative alert notice
+    if (otherPool && teamPool && otherPool !== teamPool) {
       const droppedTeam = getTeam(teamId);
+      const otherTeam = getTeam(otherTeamId);
       setNotice({
         type: 'error',
-        message: `Pool Mismatch: Table ${tableNum} is locked to Pool ${tablePool}. ${droppedTeam?.name || 'This team'} is in Pool ${teamPool}.`,
+        message: `⚠️ Table ${tableNum}: Cross-Pool Matchup (${droppedTeam?.name || 'Team'} [Pool ${teamPool}] vs ${otherTeam?.name || 'Team'} [Pool ${otherPool}]). Both pools will be credited.`,
       });
-      return;
+    } else {
+      setNotice(null);
     }
-
-    setNotice(null);
-    assignTableTeam(tableNum, slot, teamId);
   };
 
   // Open simplified modal to state winner and submit final scores
@@ -235,7 +228,8 @@ export default function GroupMatchmaker() {
 
     const teamAObj = getTeam(table.teamA);
     const teamBObj = getTeam(table.teamB);
-    const pool = getTeamPool(table.teamA) || 'A';
+    const poolA = getTeamPool(table.teamA) || 'A';
+    const poolB = getTeamPool(table.teamB) || 'A';
 
     const isWinnerA = winnerId === table.teamA;
     setScoreModal({
@@ -247,7 +241,8 @@ export default function GroupMatchmaker() {
       declaredWinnerId: winnerId,
       scoreA: isWinnerA ? 200 : 100,
       scoreB: isWinnerA ? 100 : 200,
-      pool,
+      poolA,
+      poolB,
     });
   };
 
@@ -255,7 +250,8 @@ export default function GroupMatchmaker() {
   const openEditModal = (match) => {
     const teamAObj = getTeam(match.teamA);
     const teamBObj = getTeam(match.teamB);
-    const pool = match.groupId || getTeamPool(match.teamA) || 'A';
+    const poolA = getTeamPool(match.teamA) || match.groupId || 'A';
+    const poolB = getTeamPool(match.teamB) || match.groupId || 'A';
 
     setScoreModal({
       isOpen: true,
@@ -266,7 +262,8 @@ export default function GroupMatchmaker() {
       declaredWinnerId: match.winner || match.teamA,
       scoreA: match.scoreA ?? 200,
       scoreB: match.scoreB ?? 100,
-      pool,
+      poolA,
+      poolB,
     });
   };
 
@@ -334,6 +331,7 @@ export default function GroupMatchmaker() {
     scoreModal.declaredWinnerId === scoreModal.teamA?.id ? scoreModal.teamA : scoreModal.teamB;
   const modalLoserObj =
     scoreModal.declaredWinnerId === scoreModal.teamA?.id ? scoreModal.teamB : scoreModal.teamA;
+  const isModalCrossPool = scoreModal.poolA && scoreModal.poolB && scoreModal.poolA !== scoreModal.poolB;
 
   return (
     <div className="space-y-6">
@@ -385,7 +383,6 @@ export default function GroupMatchmaker() {
       </AnimatePresence>
 
       {/* ─── Side-by-Side Workspace Layout ───────────────────────── */}
-      {/* Left: Live Matches / Tables | Right: Standby Teams */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* ─── LEFT COLUMN: Live Matches / Tables (7 cols) ────────── */}
         <div className="lg:col-span-7 space-y-4">
@@ -416,41 +413,54 @@ export default function GroupMatchmaker() {
               const teamB = table.teamB ? getTeam(table.teamB) : null;
               const bothSeated = Boolean(teamA && teamB);
 
-              const tablePool = getTablePool(tableNum);
               const poolA = teamA ? getTeamPool(teamA.id) : null;
               const poolB = teamB ? getTeamPool(teamB.id) : null;
+              const isCrossPool = Boolean(teamA && teamB && poolA && poolB && poolA !== poolB);
+              const singleSeatedPool = poolA || poolB;
 
               const targetKeyA = `t${tableNum}-teamA`;
               const targetKeyB = `t${tableNum}-teamB`;
               const isDragOverA = dragOverTarget === targetKeyA;
               const isDragOverB = dragOverTarget === targetKeyB;
-              const isForbiddenA = dragOverTarget === `${targetKeyA}-forbidden`;
-              const isForbiddenB = dragOverTarget === `${targetKeyB}-forbidden`;
 
-              const allowedStandbyA = tablePool
-                ? allStandbyTeams.filter((t) => getTeamPool(t.id) === tablePool && t.id !== table.teamB)
-                : allStandbyTeams;
-
-              const allowedStandbyB = tablePool
-                ? allStandbyTeams.filter((t) => getTeamPool(t.id) === tablePool && t.id !== table.teamA)
-                : allStandbyTeams;
+              // Check if currently dragging a team from a different pool over an occupied table
+              const draggingPool = draggingTeamId ? getTeamPool(draggingTeamId) : null;
+              const isDraggingCrossPoolA = Boolean(
+                isDragOverA && poolB && draggingPool && poolB !== draggingPool
+              );
+              const isDraggingCrossPoolB = Boolean(
+                isDragOverB && poolA && draggingPool && poolA !== draggingPool
+              );
 
               return (
                 <div
                   key={`table-arena-${tableNum}`}
-                  className="border-2 border-timber bg-bone rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between"
+                  className={`border-2 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between transition-all ${
+                    isCrossPool
+                      ? 'border-terra bg-terra/5 ring-2 ring-terra/30'
+                      : 'border-timber bg-bone'
+                  }`}
                 >
                   {/* Table Header Bar */}
-                  <div className="bg-felt text-bone px-3.5 py-2 flex items-center justify-between">
+                  <div
+                    className={`px-3.5 py-2 flex items-center justify-between text-bone transition-colors ${
+                      isCrossPool ? 'bg-terra' : 'bg-felt'
+                    }`}
+                  >
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs uppercase tracking-widest font-bold">
                         Table {tableNum}
                       </span>
 
-                      {/* Pool letter badge */}
-                      {tablePool ? (
+                      {/* Header Badge: Highlights in Red if Cross-Pool */}
+                      {isCrossPool ? (
+                        <span className="bg-bone text-terra font-mono text-[10px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-1 shadow-2xs">
+                          <AlertTriangle size={11} className="shrink-0" />
+                          <span>Cross-Pool: [{poolA}] vs [{poolB}]</span>
+                        </span>
+                      ) : singleSeatedPool ? (
                         <div className="flex items-center gap-1">
-                          {renderPoolBadge(tablePool)}
+                          {renderPoolBadge(singleSeatedPool)}
                         </div>
                       ) : (
                         <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded font-bold bg-bone/20 text-bone">
@@ -473,13 +483,21 @@ export default function GroupMatchmaker() {
                         <button
                           onClick={() => clearTable(tableNum)}
                           title="Clear Table"
-                          className="p-1 hover:bg-terra/40 rounded text-bone transition-colors cursor-pointer"
+                          className="p-1 hover:bg-black/30 rounded text-bone transition-colors cursor-pointer"
                         >
                           <X size={13} />
                         </button>
                       </div>
                     )}
                   </div>
+
+                  {/* Cross-Pool Visual Alert Banner */}
+                  {isCrossPool && (
+                    <div className="bg-terra/15 border-b border-terra/30 px-3 py-1.5 flex items-center justify-center gap-1.5 text-terra font-mono text-[10px] font-bold">
+                      <AlertCircle size={12} className="shrink-0" />
+                      <span>Warning: Teams are from different pools</span>
+                    </div>
+                  )}
 
                   {/* Matchup Drop Zones */}
                   <div className="p-3.5 space-y-2.5 flex-1 flex flex-col justify-center">
@@ -489,18 +507,20 @@ export default function GroupMatchmaker() {
                       onDragLeave={() => handleDragLeave(targetKeyA)}
                       onDrop={(e) => handleDrop(e, tableNum, 'teamA')}
                       className={`border-2 rounded-xl p-2.5 transition-all ${
-                        isForbiddenA
-                          ? 'border-terra bg-terra/15 border-dashed'
+                        isDraggingCrossPoolA
+                          ? 'border-terra bg-terra/20 border-dashed scale-[1.01]'
                           : isDragOverA
                           ? 'border-felt bg-felt/15 border-dashed scale-[1.01]'
                           : teamA
-                          ? 'border-timber/15 bg-bone-dark/25'
+                          ? isCrossPool
+                            ? 'border-terra/30 bg-terra/10'
+                            : 'border-timber/15 bg-bone-dark/25'
                           : 'border-timber/15 border-dashed bg-bone-dark/10 hover:border-timber/30'
                       }`}
                     >
-                      {isForbiddenA ? (
-                        <div className="py-2 text-center text-terra font-mono text-xs font-bold">
-                          ❌ Pool Mismatch ({tablePool} only)
+                      {isDraggingCrossPoolA ? (
+                        <div className="py-1 text-center text-terra font-mono text-[11px] font-bold">
+                          ⚠️ Drop for Cross-Pool Match ([{poolB}] vs [{draggingPool}])
                         </div>
                       ) : teamA ? (
                         <div className="flex items-center justify-between gap-2">
@@ -528,25 +548,29 @@ export default function GroupMatchmaker() {
                       ) : (
                         <div className="py-1 text-center">
                           <p className="font-mono text-[11px] text-timber/40">
-                            {tablePool ? `Drop Pool ${tablePool} team` : 'Drop Team A'}
+                            {poolB ? `Drop team to play [Pool ${poolB}]` : 'Drop Team A'}
                           </p>
-                          {isAdmin && allowedStandbyA.length > 0 && (
+                          {isAdmin && allStandbyTeams.length > 0 && (
                             <div className="mt-1">
                               <select
                                 defaultValue=""
                                 onChange={(e) => {
                                   if (e.target.value) assignTableTeam(tableNum, 'teamA', e.target.value);
                                 }}
-                                className="text-[10px] font-mono bg-bone border border-timber/20 rounded px-1.5 py-0.5 text-timber cursor-pointer"
+                                className="text-[10px] font-mono bg-bone border border-timber/20 rounded px-1.5 py-0.5 text-timber cursor-pointer max-w-full"
                               >
                                 <option value="" disabled>
                                   Select team...
                                 </option>
-                                {allowedStandbyA.map((t) => (
-                                  <option key={t.id} value={t.id}>
-                                    [{getTeamPool(t.id)}] {t.name}
-                                  </option>
-                                ))}
+                                {allStandbyTeams.map((t) => {
+                                  const tPool = getTeamPool(t.id);
+                                  const isMismatched = poolB && tPool !== poolB;
+                                  return (
+                                    <option key={t.id} value={t.id}>
+                                      [{tPool}] {t.name} {isMismatched ? '⚠️ (Cross-Pool)' : ''}
+                                    </option>
+                                  );
+                                })}
                               </select>
                             </div>
                           )}
@@ -569,18 +593,20 @@ export default function GroupMatchmaker() {
                       onDragLeave={() => handleDragLeave(targetKeyB)}
                       onDrop={(e) => handleDrop(e, tableNum, 'teamB')}
                       className={`border-2 rounded-xl p-2.5 transition-all ${
-                        isForbiddenB
-                          ? 'border-terra bg-terra/15 border-dashed'
+                        isDraggingCrossPoolB
+                          ? 'border-terra bg-terra/20 border-dashed scale-[1.01]'
                           : isDragOverB
                           ? 'border-felt bg-felt/15 border-dashed scale-[1.01]'
                           : teamB
-                          ? 'border-timber/15 bg-bone-dark/25'
+                          ? isCrossPool
+                            ? 'border-terra/30 bg-terra/10'
+                            : 'border-timber/15 bg-bone-dark/25'
                           : 'border-timber/15 border-dashed bg-bone-dark/10 hover:border-timber/30'
                       }`}
                     >
-                      {isForbiddenB ? (
-                        <div className="py-2 text-center text-terra font-mono text-xs font-bold">
-                          ❌ Pool Mismatch ({tablePool} only)
+                      {isDraggingCrossPoolB ? (
+                        <div className="py-1 text-center text-terra font-mono text-[11px] font-bold">
+                          ⚠️ Drop for Cross-Pool Match ([{poolA}] vs [{draggingPool}])
                         </div>
                       ) : teamB ? (
                         <div className="flex items-center justify-between gap-2">
@@ -608,25 +634,29 @@ export default function GroupMatchmaker() {
                       ) : (
                         <div className="py-1 text-center">
                           <p className="font-mono text-[11px] text-timber/40">
-                            {tablePool ? `Drop Pool ${tablePool} team` : 'Drop Team B'}
+                            {poolA ? `Drop team to play [Pool ${poolA}]` : 'Drop Team B'}
                           </p>
-                          {isAdmin && allowedStandbyB.length > 0 && (
+                          {isAdmin && allStandbyTeams.length > 0 && (
                             <div className="mt-1">
                               <select
                                 defaultValue=""
                                 onChange={(e) => {
                                   if (e.target.value) assignTableTeam(tableNum, 'teamB', e.target.value);
                                 }}
-                                className="text-[10px] font-mono bg-bone border border-timber/20 rounded px-1.5 py-0.5 text-timber cursor-pointer"
+                                className="text-[10px] font-mono bg-bone border border-timber/20 rounded px-1.5 py-0.5 text-timber cursor-pointer max-w-full"
                               >
                                 <option value="" disabled>
                                   Select team...
                                 </option>
-                                {allowedStandbyB.map((t) => (
-                                  <option key={t.id} value={t.id}>
-                                    [{getTeamPool(t.id)}] {t.name}
-                                  </option>
-                                ))}
+                                {allStandbyTeams.map((t) => {
+                                  const tPool = getTeamPool(t.id);
+                                  const isMismatched = poolA && tPool !== poolA;
+                                  return (
+                                    <option key={t.id} value={t.id}>
+                                      [{tPool}] {t.name} {isMismatched ? '⚠️ (Cross-Pool)' : ''}
+                                    </option>
+                                  );
+                                })}
                               </select>
                             </div>
                           )}
@@ -644,7 +674,11 @@ export default function GroupMatchmaker() {
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => openScoreModal(tableNum, teamA.id)}
-                          className="px-2 py-2 bg-felt text-bone rounded-lg font-display text-xs uppercase font-bold tracking-wider hover:bg-felt-light active:scale-95 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer text-center"
+                          className={`px-2 py-2 rounded-lg font-display text-xs uppercase font-bold tracking-wider active:scale-95 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer text-center ${
+                            isCrossPool
+                              ? 'bg-terra text-bone hover:bg-terra-light'
+                              : 'bg-felt text-bone hover:bg-felt-light'
+                          }`}
                         >
                           <Trophy size={13} className="text-brass shrink-0" />
                           <span className="truncate">{teamA.name}</span>
@@ -652,7 +686,11 @@ export default function GroupMatchmaker() {
 
                         <button
                           onClick={() => openScoreModal(tableNum, teamB.id)}
-                          className="px-2 py-2 bg-felt text-bone rounded-lg font-display text-xs uppercase font-bold tracking-wider hover:bg-felt-light active:scale-95 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer text-center"
+                          className={`px-2 py-2 rounded-lg font-display text-xs uppercase font-bold tracking-wider active:scale-95 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer text-center ${
+                            isCrossPool
+                              ? 'bg-terra text-bone hover:bg-terra-light'
+                              : 'bg-felt text-bone hover:bg-felt-light'
+                          }`}
                         >
                           <Trophy size={13} className="text-brass shrink-0" />
                           <span className="truncate">{teamB.name}</span>
@@ -777,7 +815,7 @@ export default function GroupMatchmaker() {
                         </span>
                       </div>
 
-                      {/* Quick seat buttons: only for tables accepting this pool */}
+                      {/* Quick seat buttons: shows on any open table with warning if cross-pool */}
                       {isAdmin && (
                         <div className="flex gap-1">
                           {tableSlots.map((num) => {
@@ -786,18 +824,25 @@ export default function GroupMatchmaker() {
                             if (!hasOpenSlot) return null;
 
                             const tablePool = getTablePool(num);
-                            if (tablePool && tablePool !== pool) return null;
-
+                            const isCrossSeat = Boolean(tablePool && tablePool !== pool);
                             const slot = !table.teamA ? 'teamA' : 'teamB';
 
                             return (
                               <button
                                 key={`seat-${team.id}-t${num}`}
                                 onClick={() => assignTableTeam(num, slot, team.id)}
-                                className="py-1 px-1.5 bg-felt/10 hover:bg-felt hover:text-bone text-felt border border-felt/20 rounded font-mono text-[10px] uppercase font-bold transition-all cursor-pointer"
-                                title={`Seat at Table ${num}`}
+                                className={`py-1 px-1.5 rounded font-mono text-[10px] uppercase font-bold transition-all cursor-pointer ${
+                                  isCrossSeat
+                                    ? 'bg-terra/10 hover:bg-terra hover:text-bone text-terra border border-terra/30'
+                                    : 'bg-felt/10 hover:bg-felt hover:text-bone text-felt border border-felt/20'
+                                }`}
+                                title={
+                                  isCrossSeat
+                                    ? `Seat at Table ${num} (⚠️ Cross-Pool Matchup)`
+                                    : `Seat at Table ${num}`
+                                }
                               >
-                                → T{num}
+                                → T{num}{isCrossSeat ? ' ⚠️' : ''}
                               </button>
                             );
                           })}
@@ -833,19 +878,30 @@ export default function GroupMatchmaker() {
               const hasScore = m.scoreA != null && m.scoreB != null;
               const diff = hasScore ? Math.abs(Number(m.scoreA) - Number(m.scoreB)) : null;
               const winnerName = isWinnerA ? teamA?.name : teamB?.name;
-              const pool = m.groupId || getTeamPool(m.teamA) || 'A';
+              const poolA = getTeamPool(m.teamA) || m.groupId || 'A';
+              const poolB = getTeamPool(m.teamB) || m.groupId || 'A';
+              const isCross = poolA !== poolB;
 
               return (
                 <div
                   key={m.id}
-                  className="border border-timber/15 rounded-xl p-2 bg-bone-dark/15 flex items-center justify-between gap-3 text-xs"
+                  className={`border rounded-xl p-2 flex items-center justify-between gap-3 text-xs transition-colors ${
+                    isCross ? 'border-terra/30 bg-terra/5' : 'border-timber/15 bg-bone-dark/15'
+                  }`}
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-timber/10 text-timber/60">
                       T{m.table || '1'}
                     </span>
 
-                    {renderPoolBadge(pool)}
+                    {/* Pools indicator */}
+                    {isCross ? (
+                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.2 rounded font-bold bg-terra text-bone">
+                        {poolA} vs {poolB}
+                      </span>
+                    ) : (
+                      renderPoolBadge(poolA)
+                    )}
 
                     <div className="flex items-center gap-1.5">
                       <span
@@ -909,13 +965,11 @@ export default function GroupMatchmaker() {
       <AnimatePresence>
         {showStandings && (
           <div className="fixed inset-0 z-50 flex justify-end bg-timber/60 backdrop-blur-2xs">
-            {/* Backdrop click to close */}
             <div
               className="absolute inset-0"
               onClick={() => setShowStandings(false)}
             />
 
-            {/* Slideout Panel */}
             <motion.div
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
@@ -976,10 +1030,16 @@ export default function GroupMatchmaker() {
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-bone border-2 border-timber rounded-2xl max-w-md w-full shadow-2xl overflow-hidden"
+              className={`bg-bone border-2 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden ${
+                isModalCrossPool ? 'border-terra' : 'border-timber'
+              }`}
             >
               {/* Modal Header */}
-              <div className="bg-felt text-bone px-5 py-3.5 flex items-center justify-between">
+              <div
+                className={`px-5 py-3.5 flex items-center justify-between text-bone ${
+                  isModalCrossPool ? 'bg-terra' : 'bg-felt'
+                }`}
+              >
                 <div className="flex items-center gap-2">
                   <Trophy size={16} className="text-brass" />
                   <span className="font-display text-sm md:text-base uppercase tracking-wider font-bold">
@@ -987,7 +1047,13 @@ export default function GroupMatchmaker() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {renderPoolBadge(scoreModal.pool)}
+                  {isModalCrossPool ? (
+                    <span className="font-mono text-[10px] uppercase font-bold bg-bone text-terra px-2 py-0.5 rounded">
+                      [{scoreModal.poolA}] vs [{scoreModal.poolB}]
+                    </span>
+                  ) : (
+                    renderPoolBadge(scoreModal.poolA)
+                  )}
                   <button
                     onClick={closeScoreModal}
                     className="p-1 hover:bg-bone/20 rounded text-bone transition-colors cursor-pointer"
@@ -999,6 +1065,14 @@ export default function GroupMatchmaker() {
 
               {/* Modal Body */}
               <div className="p-5 space-y-4">
+                {/* Cross-Pool Notice in Modal */}
+                {isModalCrossPool && (
+                  <div className="bg-terra/10 border border-terra/30 rounded-xl p-2.5 text-terra font-mono text-[10px] flex items-center gap-2 font-bold">
+                    <AlertTriangle size={14} className="shrink-0" />
+                    <span>Cross-Pool Match: Scores will credit both teams to their respective pool standings!</span>
+                  </div>
+                )}
+
                 {/* Winner Declaration Banner */}
                 <div className="bg-felt/10 border border-felt/20 rounded-xl p-3 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
