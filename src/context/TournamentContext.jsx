@@ -55,6 +55,7 @@ function buildInitialState(demoOverride) {
     const tablesCount = saved.tablesCount || DEFAULT_TABLES_COUNT;
     return {
       ...saved,
+      stage: saved.stage === 'open' ? 'groups' : (saved.stage || 'setup'),
       tablesCount,
       activeTables: initActiveTables(tablesCount, saved.activeTables),
       isDemo,
@@ -234,8 +235,13 @@ export function TournamentProvider({ children }) {
   const startGroupStage = useCallback(() => {
     mutate('Started group stage', (s) => {
       s.stage = 'groups';
+      s.activeTables = initActiveTables(s.tablesCount || DEFAULT_TABLES_COUNT);
       resetMatchIdCounter([]);
-      s.matches = generateGroupMatches(s.groups, s.tablesCount);
+      const active = s.teams.filter(t => !t.withdrawn);
+      if (!s.groups || Object.keys(s.groups).length === 0) {
+        const rec = recommendGroups(active.length);
+        s.groups = distributeTeams(active, rec.poolCount);
+      }
       return s;
     });
   }, [mutate]);
@@ -427,10 +433,21 @@ export function TournamentProvider({ children }) {
         }
       }
 
+      let poolId = null;
+      if (s.groups) {
+        for (const [gid, teamIds] of Object.entries(s.groups)) {
+          if (teamIds.includes(currentActive.teamA)) {
+            poolId = gid;
+            break;
+          }
+        }
+      }
+
       resetMatchIdCounter(s.matches || []);
       s.matches.push({
         id: nextMatchId(),
-        stage: 'open',
+        stage: 'group',
+        groupId: poolId || 'A',
         table: Number(tableNum),
         teamA: currentActive.teamA,
         teamB: currentActive.teamB,

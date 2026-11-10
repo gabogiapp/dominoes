@@ -112,51 +112,21 @@ export default function AdminToolbar({ isOpen, onClose }) {
             {/* Stage actions */}
             <div className="px-4 py-3 border-b border-timber/10 shrink-0 space-y-2">
               {stage === 'setup' && (
-                <div className="space-y-2">
-                  <button
-                    onClick={startOpenStage}
-                    disabled={state.teams.filter(t => !t.withdrawn).length < 2}
-                    className="w-full py-3 bg-felt text-bone font-display text-xs uppercase tracking-wider rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-felt-light active:scale-[0.98] transition-all disabled:opacity-30 cursor-pointer shadow-xs"
-                  >
-                    <Play size={15} /> Start Table Queue (Manual Dispatch)
-                  </button>
-                  <button
-                    onClick={startGroupStage}
-                    disabled={state.teams.filter(t => !t.withdrawn).length < 2}
-                    className="w-full py-2 bg-bone border border-timber/20 text-timber font-mono text-[11px] uppercase tracking-wider rounded-lg font-semibold hover:bg-timber/5 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-30"
-                  >
-                    Start Group Pools (Round-Robin)
-                  </button>
-                </div>
-              )}
-              {stage === 'open' && (
                 <button
-                  onClick={() => {
-                    const count = prompt('Advance how many teams to Knockout? (2, 4, or 8)', '4');
-                    if (count) generateKnockoutFromStandings(Number(count));
-                  }}
-                  className="w-full py-3 bg-brass text-timber font-display text-xs uppercase tracking-wider rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-brass-light active:scale-[0.98] transition-all cursor-pointer shadow-xs"
+                  onClick={startGroupStage}
+                  disabled={state.teams.filter(t => !t.withdrawn).length < 2}
+                  className="w-full py-3 bg-felt text-bone font-display text-xs uppercase tracking-wider rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-felt-light active:scale-[0.98] transition-all disabled:opacity-30 cursor-pointer shadow-xs"
                 >
-                  <Trophy size={16} /> Advance to Knockout Playoffs
+                  <Play size={15} /> Start Group Stage
                 </button>
               )}
-              {stage === 'groups' && (
-                <div className="space-y-1.5">
-                  {groupComplete && (
-                    <button
-                      onClick={generateKnockout}
-                      className="w-full py-3 bg-brass text-timber font-display text-xs uppercase tracking-wider rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-brass-light active:scale-[0.98] transition-all cursor-pointer shadow-xs"
-                    >
-                      <Trophy size={16} /> Generate Knockout
-                    </button>
-                  )}
-                  <button
-                    onClick={startOpenStage}
-                    className="w-full py-1.5 bg-felt/10 text-felt border border-felt/20 font-mono text-[10px] uppercase tracking-wider rounded flex items-center justify-center gap-1 hover:bg-felt hover:text-bone transition-all cursor-pointer"
-                  >
-                    <ArrowRightLeft size={11} /> Switch to Manual Table Queue
-                  </button>
-                </div>
+              {(stage === 'groups' || stage === 'open') && (
+                <button
+                  onClick={generateKnockout}
+                  className="w-full py-3 bg-brass text-timber font-display text-xs uppercase tracking-wider rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-brass-light active:scale-[0.98] transition-all cursor-pointer shadow-xs"
+                >
+                  <Trophy size={16} /> Generate Knockout Bracket
+                </button>
               )}
               {stage === 'finished' && state.champion && (
                 <div className="text-center p-2 border border-brass rounded-lg bg-brass/10">

@@ -26,11 +26,15 @@ export default function TVStandingsTable({ groupId }) {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-timber/10">
-              <th className="text-left font-mono text-[10px] tracking-widest uppercase text-timber/40 px-4 py-2 w-8">#</th>
+            <tr className="border-b border-timber/10 bg-bone-dark/30">
+              <th className="text-left font-mono text-[10px] tracking-widest uppercase text-timber/40 px-3 py-2 w-7">#</th>
               <th className="text-left font-mono text-[10px] tracking-widest uppercase text-timber/40 px-2 py-2">Team</th>
-              <th className="text-center font-mono text-[10px] tracking-widest uppercase text-timber/40 px-2 py-2 w-20">W – L</th>
-              <th className="text-right font-mono text-[10px] tracking-widest uppercase text-timber/40 px-4 py-2 w-28">Status</th>
+              <th className="text-center font-mono text-[10px] tracking-widest uppercase text-timber/40 px-1 py-2 w-10">GP</th>
+              <th className="text-center font-mono text-[10px] tracking-widest uppercase text-timber/40 px-2 py-2 w-16">W – L</th>
+              <th className="text-center font-mono text-[10px] tracking-widest uppercase text-timber/40 px-1 py-2 w-12 hidden sm:table-cell">PF</th>
+              <th className="text-center font-mono text-[10px] tracking-widest uppercase text-timber/40 px-1 py-2 w-12 hidden sm:table-cell">PA</th>
+              <th className="text-center font-mono text-[10px] tracking-widest uppercase text-timber/40 px-2 py-2 w-16">Diff (±)</th>
+              <th className="text-right font-mono text-[10px] tracking-widest uppercase text-timber/40 px-3 py-2 w-24">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -40,6 +44,7 @@ export default function TVStandingsTable({ groupId }) {
               const status = getTeamStatus(s.teamId, groupId, standings, state.groups, state.matches, state.overrides);
               const isAdvancing = status === 'ADVANCING';
               const isEliminated = status === 'ELIMINATED';
+              const diff = s.diff || 0;
 
               return (
                 <motion.tr
@@ -49,25 +54,47 @@ export default function TVStandingsTable({ groupId }) {
                     team.withdrawn ? 'opacity-30 line-through' : ''
                   } ${isAdvancing ? 'bg-felt/5' : ''}`}
                 >
-                  <td className="px-4 py-3 font-mono text-sm text-timber/40 font-bold">
+                  <td className="px-3 py-3 font-mono text-xs text-timber/40 font-bold">
                     {idx + 1}
                   </td>
                   <td className="px-2 py-3">
-                    <p className={`font-display text-base md:text-lg uppercase font-bold tracking-wide ${isEliminated ? 'text-timber/30' : 'text-timber'}`}>
+                    <p className={`font-display text-sm md:text-base uppercase font-bold tracking-wide ${isEliminated ? 'text-timber/30' : 'text-timber'}`}>
                       {team.name}
                     </p>
                     <p className="font-mono text-[10px] text-timber/40 mt-0.5">
                       {team.player1} & {team.player2}
                     </p>
                   </td>
+                  <td className="px-1 py-3 text-center font-mono text-xs text-timber/60">
+                    {s.played}
+                  </td>
                   <td className="px-2 py-3 text-center">
-                    <span className={`font-mono text-base md:text-lg font-bold ${isEliminated ? 'text-timber/30' : 'text-timber'}`}>
+                    <span className={`font-mono text-xs md:text-sm font-bold ${isEliminated ? 'text-timber/30' : 'text-timber'}`}>
                       {s.wins} – {s.losses}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-1 py-3 text-center font-mono text-xs text-timber/60 hidden sm:table-cell">
+                    {s.pointsFor || 0}
+                  </td>
+                  <td className="px-1 py-3 text-center font-mono text-xs text-timber/60 hidden sm:table-cell">
+                    {s.pointsAgainst || 0}
+                  </td>
+                  <td className="px-2 py-3 text-center font-mono text-xs font-bold">
+                    <span
+                      className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-mono font-bold ${
+                        diff > 0
+                          ? 'bg-felt/15 text-felt'
+                          : diff < 0
+                          ? 'bg-terra/15 text-terra'
+                          : 'bg-timber/10 text-timber/50'
+                      }`}
+                    >
+                      {diff > 0 ? `+${diff}` : diff}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 text-right">
                     {status && (
-                      <span className={`font-mono text-[10px] tracking-widest uppercase px-2 py-0.5 rounded ${
+                      <span className={`font-mono text-[9px] md:text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded ${
                         isAdvancing
                           ? 'bg-felt text-bone'
                           : isEliminated
