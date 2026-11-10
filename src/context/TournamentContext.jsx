@@ -18,6 +18,7 @@ import {
   advanceBracketWinner,
   resetBracketMatch as engineResetBracketMatch,
   recommendGroups,
+  nextMatchId,
   nextTeamId,
   resetMatchIdCounter,
   resetTeamIdCounter,

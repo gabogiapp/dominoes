@@ -223,22 +223,26 @@ export default function GroupMatchmaker() {
 
   // Open simplified modal to state winner and submit final scores
   const openScoreModal = (tableNum, winnerId) => {
-    const table = activeTables[tableNum];
+    const tNum = Number(tableNum);
+    const table = activeTables[tNum] || activeTables[tableNum] || {};
     if (!table?.teamA || !table?.teamB) return;
 
-    const teamAObj = getTeam(table.teamA);
-    const teamBObj = getTeam(table.teamB);
-    const poolA = getTeamPool(table.teamA) || 'A';
-    const poolB = getTeamPool(table.teamB) || 'A';
+    const idA = typeof table.teamA === 'object' ? table.teamA?.id : table.teamA;
+    const idB = typeof table.teamB === 'object' ? table.teamB?.id : table.teamB;
 
-    const isWinnerA = winnerId === table.teamA;
+    const teamAObj = getTeam(idA) || { id: idA, name: idA };
+    const teamBObj = getTeam(idB) || { id: idB, name: idB };
+    const poolA = getTeamPool(idA) || 'A';
+    const poolB = getTeamPool(idB) || 'A';
+
+    const isWinnerA = winnerId === idA;
     setScoreModal({
       isOpen: true,
-      tableNum,
+      tableNum: tNum,
       matchId: null,
       teamA: teamAObj,
       teamB: teamBObj,
-      declaredWinnerId: winnerId,
+      declaredWinnerId: winnerId || idA,
       scoreA: isWinnerA ? 200 : 100,
       scoreB: isWinnerA ? 100 : 200,
       poolA,
@@ -248,8 +252,8 @@ export default function GroupMatchmaker() {
 
   // Open modal to edit existing match score
   const openEditModal = (match) => {
-    const teamAObj = getTeam(match.teamA);
-    const teamBObj = getTeam(match.teamB);
+    const teamAObj = getTeam(match.teamA) || { id: match.teamA, name: match.teamA };
+    const teamBObj = getTeam(match.teamB) || { id: match.teamB, name: match.teamB };
     const poolA = getTeamPool(match.teamA) || match.groupId || 'A';
     const poolB = getTeamPool(match.teamB) || match.groupId || 'A';
 
@@ -291,32 +295,45 @@ export default function GroupMatchmaker() {
 
   // Submit scores from modal
   const handleSubmitModalScores = () => {
-    const { tableNum, matchId, teamA, teamB, declaredWinnerId, scoreA, scoreB } = scoreModal;
-    if (!teamA || !teamB) return;
+    try {
+      const { tableNum, matchId, teamA, teamB, declaredWinnerId, scoreA, scoreB } = scoreModal;
+      const tNum = Number(tableNum);
+      const currentTable = activeTables[tNum] || activeTables[tableNum] || {};
 
-    const isWinnerA = declaredWinnerId === teamA.id;
-    const numA = isWinnerA ? 200 : (scoreA !== '' && scoreA != null ? Math.min(199, Math.max(0, Number(scoreA))) : 100);
-    const numB = !isWinnerA ? 200 : (scoreB !== '' && scoreB != null ? Math.min(199, Math.max(0, Number(scoreB))) : 100);
+      const idA = teamA?.id || currentTable.teamA;
+      const idB = teamB?.id || currentTable.teamB;
+      if (!idA || !idB) return;
 
-    if (matchId) {
-      updateMatchScore(matchId, {
-        scoreA: numA,
-        scoreB: numB,
-        winner: declaredWinnerId,
-      });
-      setNotice({
-        type: 'success',
-        message: `Updated scores: ${teamA.name} ${numA} – ${numB} ${teamB.name}`,
-      });
-    } else {
-      recordOpenMatch(tableNum, numA, numB, declaredWinnerId, teamA.id, teamB.id);
-      setNotice({
-        type: 'success',
-        message: `Result submitted: ${teamA.name} ${numA} – ${numB} ${teamB.name}. Table ${tableNum} is now free!`,
-      });
+      const teamAName = teamA?.name || getTeam(idA)?.name || 'Team A';
+      const teamBName = teamB?.name || getTeam(idB)?.name || 'Team B';
+
+      const isWinnerA = declaredWinnerId === idA;
+      const numA = isWinnerA ? 200 : (scoreA !== '' && scoreA != null ? Math.min(199, Math.max(0, Number(scoreA))) : 100);
+      const numB = !isWinnerA ? 200 : (scoreB !== '' && scoreB != null ? Math.min(199, Math.max(0, Number(scoreB))) : 100);
+      const finalWinner = declaredWinnerId || (isWinnerA ? idA : idB);
+
+      if (matchId) {
+        updateMatchScore(matchId, {
+          scoreA: numA,
+          scoreB: numB,
+          winner: finalWinner,
+        });
+        setNotice({
+          type: 'success',
+          message: `Updated scores: ${teamAName} ${numA} – ${numB} ${teamBName}`,
+        });
+      } else {
+        recordOpenMatch(tNum, numA, numB, finalWinner, idA, idB);
+        setNotice({
+          type: 'success',
+          message: `Result submitted: ${teamAName} ${numA} – ${numB} ${teamBName}. Table ${tNum} is now free!`,
+        });
+      }
+    } catch (err) {
+      console.error('Error submitting match result:', err);
+    } finally {
+      closeScoreModal();
     }
-
-    closeScoreModal();
   };
 
   // Calculate live diff preview inside modal
