@@ -318,16 +318,8 @@ export default function GroupMatchmaker() {
           scoreB: numB,
           winner: finalWinner,
         });
-        setNotice({
-          type: 'success',
-          message: `Updated scores: ${teamAName} ${numA} – ${numB} ${teamBName}`,
-        });
       } else {
         recordOpenMatch(tNum, numA, numB, finalWinner, idA, idB);
-        setNotice({
-          type: 'success',
-          message: `Result submitted: ${teamAName} ${numA} – ${numB} ${teamBName}. Table ${tNum} is now free!`,
-        });
       }
     } catch (err) {
       console.error('Error submitting match result:', err);
@@ -362,9 +354,6 @@ export default function GroupMatchmaker() {
         >
           <BarChart3 size={15} className="text-felt" />
           <span>Standings</span>
-          <span className="font-mono text-[10px] bg-timber/10 px-1.5 py-0.2 rounded text-timber/60 font-semibold">
-            {groupLabels.length} {groupLabels.length === 1 ? 'Pool' : 'Pools'}
-          </span>
         </button>
       </div>
 
@@ -809,22 +798,11 @@ export default function GroupMatchmaker() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      {/* Record & Diff */}
-                      <div className="text-right font-mono text-[11px]">
-                        <span className="font-bold text-timber block leading-tight">
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      {/* Record */}
+                      <div className="text-right font-mono text-xs">
+                        <span className="font-bold text-timber">
                           {st.wins}W–{st.losses}L
-                        </span>
-                        <span
-                          className={`text-[9px] font-bold block ${
-                            st.diff > 0
-                              ? 'text-felt'
-                              : st.diff < 0
-                              ? 'text-terra'
-                              : 'text-timber/40'
-                          }`}
-                        >
-                          {st.diff > 0 ? `+${st.diff}` : st.diff} diff
                         </span>
                       </div>
 
@@ -877,9 +855,6 @@ export default function GroupMatchmaker() {
             <h3 className="font-display text-sm font-bold uppercase tracking-wider text-timber">
               Completed Matches ({completedMatches.length})
             </h3>
-            <span className="font-mono text-[11px] text-timber/50">
-              Rankings sort by Wins, then Point Differential (±)
-            </span>
           </div>
 
           <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
@@ -994,14 +969,9 @@ export default function GroupMatchmaker() {
               <div className="bg-felt text-bone px-5 py-4 flex items-center justify-between border-b border-bone/10">
                 <div className="flex items-center gap-2.5">
                   <BarChart3 size={20} className="text-brass" />
-                  <div>
-                    <h2 className="font-display text-base font-bold uppercase tracking-wider text-bone leading-tight">
-                      Pool Standings
-                    </h2>
-                    <p className="font-mono text-[11px] text-bone/60">
-                      Ranked by Wins, then Point Differential (±)
-                    </p>
-                  </div>
+                  <h2 className="font-display text-base font-bold uppercase tracking-wider text-bone leading-tight">
+                    Pool Standings
+                  </h2>
                 </div>
 
                 <button
@@ -1143,9 +1113,6 @@ export default function GroupMatchmaker() {
                           value="200"
                           className="w-full bg-felt/10 border-2 border-felt/40 rounded-lg py-1.5 font-mono text-2xl font-bold text-center text-felt cursor-not-allowed select-none"
                         />
-                        <span className="block font-mono text-[9px] text-felt font-bold uppercase tracking-wider mt-1">
-                          Locked Win Score (200)
-                        </span>
                       </div>
                     ) : (
                       <div>
@@ -1166,9 +1133,6 @@ export default function GroupMatchmaker() {
                           }}
                           className="w-full bg-bone border-2 border-timber/25 focus:border-felt rounded-lg py-1.5 font-mono text-2xl font-bold text-center text-timber focus:outline-none"
                         />
-                        <span className="block font-mono text-[9px] text-timber/50 font-semibold uppercase tracking-wider mt-1">
-                          Points Scored (0–199)
-                        </span>
                       </div>
                     )}
                   </div>
@@ -1200,9 +1164,6 @@ export default function GroupMatchmaker() {
                           value="200"
                           className="w-full bg-felt/10 border-2 border-felt/40 rounded-lg py-1.5 font-mono text-2xl font-bold text-center text-felt cursor-not-allowed select-none"
                         />
-                        <span className="block font-mono text-[9px] text-felt font-bold uppercase tracking-wider mt-1">
-                          Locked Win Score (200)
-                        </span>
                       </div>
                     ) : (
                       <div>
@@ -1223,9 +1184,6 @@ export default function GroupMatchmaker() {
                           }}
                           className="w-full bg-bone border-2 border-timber/25 focus:border-felt rounded-lg py-1.5 font-mono text-2xl font-bold text-center text-timber focus:outline-none"
                         />
-                        <span className="block font-mono text-[9px] text-timber/50 font-semibold uppercase tracking-wider mt-1">
-                          Points Scored (0–199)
-                        </span>
                       </div>
                     )}
                   </div>
