@@ -146,7 +146,7 @@ export function generateGroupMatches(groups, tablesCount = 2) {
 export function calcGroupStandings(groupId, teamIds, matches, overrides = {}) {
   const stats = {};
   teamIds.forEach(id => {
-    stats[id] = { teamId: id, wins: 0, losses: 0, played: 0 };
+    stats[id] = { teamId: id, wins: 0, losses: 0, played: 0, pointsFor: 0, pointsAgainst: 0, diff: 0 };
   });
 
   const groupMatches = matches.filter(m => m.stage === 'group' && m.groupId === groupId && m.winner);
@@ -155,6 +155,21 @@ export function calcGroupStandings(groupId, teamIds, matches, overrides = {}) {
     const loserId = winner === m.teamA ? m.teamB : m.teamA;
     if (stats[winner]) { stats[winner].wins++; stats[winner].played++; }
     if (stats[loserId]) { stats[loserId].losses++; stats[loserId].played++; }
+
+    if (m.scoreA != null && m.scoreB != null) {
+      const sA = Number(m.scoreA);
+      const sB = Number(m.scoreB);
+      if (stats[m.teamA]) {
+        stats[m.teamA].pointsFor += sA;
+        stats[m.teamA].pointsAgainst += sB;
+        stats[m.teamA].diff += (sA - sB);
+      }
+      if (stats[m.teamB]) {
+        stats[m.teamB].pointsFor += sB;
+        stats[m.teamB].pointsAgainst += sA;
+        stats[m.teamB].diff += (sB - sA);
+      }
+    }
   });
 
   const standings = Object.values(stats);
@@ -184,8 +199,10 @@ export function calcGroupStandings(groupId, teamIds, matches, overrides = {}) {
   // 1. Manual rank overrides (if set by organizer)
   // 2. Most wins first
   // 3. Fewest losses first (higher win rate / fewer defeats)
-  // 4. Head-to-head wins among teams with identical records
-  // 5. Deterministic fallback by teamId
+  // 4. Point differential (diff) descending
+  // 5. Points for (pointsFor) descending
+  // 6. Head-to-head wins among teams with identical records
+  // 7. Deterministic fallback by teamId
   standings.sort((a, b) => {
     if (overrides.manualRank && overrides.manualRank[groupId]) {
       const rankMap = overrides.manualRank[groupId];
@@ -198,6 +215,91 @@ export function calcGroupStandings(groupId, teamIds, matches, overrides = {}) {
 
     if (b.wins !== a.wins) return b.wins - a.wins;
     if (a.losses !== b.losses) return a.losses - b.losses;
+    if (b.diff !== a.diff) return b.diff - a.diff;
+    if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
+    if (b.h2hWins !== a.h2hWins) return b.h2hWins - a.h2hWins;
+    return a.teamId.localeCompare(b.teamId);
+  });
+
+  return standings;
+}
+
+// ─── Calculate unified open / queue standings ───────────────────────
+export function calcOpenStandings(teamIds, matches, overrides = {}) {
+  const stats = {};
+  (teamIds || []).forEach(id => {
+    stats[id] = { teamId: id, wins: 0, losses: 0, played: 0, pointsFor: 0, pointsAgainst: 0, diff: 0 };
+  });
+
+  const validMatches = (matches || []).filter(m => m.winner && (m.stage === 'open' || m.stage === 'group'));
+  validMatches.forEach(m => {
+    const winner = overrides.manualWinner?.[m.id] || m.winner;
+    const loserId = winner === m.teamA ? m.teamB : m.teamA;
+
+    if (stats[winner]) { stats[winner].wins++; stats[winner].played++; }
+    if (stats[loserId]) { stats[loserId].losses++; stats[loserId].played++; }
+
+    const hasScores = m.scoreA != null && m.scoreB != null;
+    const sA = hasScores ? Number(m.scoreA) : (winner === m.teamA ? 1 : 0);
+    const sB = hasScores ? Number(m.scoreB) : (winner === m.teamB ? 1 : 0);
+
+    if (stats[m.teamA]) {
+      stats[m.teamA].pointsFor += sA;
+      stats[m.teamA].pointsAgainst += sB;
+      stats[m.teamA].diff += (sA - sB);
+    }
+    if (stats[m.teamB]) {
+      stats[m.teamB].pointsFor += sB;
+      stats[m.teamB].pointsAgainst += sA;
+      stats[m.teamB].diff += (sB - sA);
+    }
+  });
+
+  const standings = Object.values(stats);
+
+  // Compute head-to-head wins among teams that share the exact same record
+  standings.forEach(team => {
+    const sameRecordTeams = standings.filter(
+      other => other.teamId !== team.teamId && other.wins === team.wins && other.losses === team.losses
+    );
+    let h2hWins = 0;
+    if (sameRecordTeams.length > 0) {
+      const sameRecordIds = new Set(sameRecordTeams.map(t => t.teamId));
+      validMatches.forEach(m => {
+        const winner = overrides.manualWinner?.[m.id] || m.winner;
+        if (winner === team.teamId) {
+          const opponent = m.teamA === team.teamId ? m.teamB : m.teamA;
+          if (sameRecordIds.has(opponent)) {
+            h2hWins++;
+          }
+        }
+      });
+    }
+    team.h2hWins = h2hWins;
+  });
+
+  // Sort:
+  // 1. Manual rank overrides (if any)
+  // 2. Most wins first
+  // 3. Fewest losses first
+  // 4. Point differential (diff) descending
+  // 5. Points for (pointsFor) descending
+  // 6. Head-to-head wins
+  // 7. Deterministic fallback by teamId
+  standings.sort((a, b) => {
+    const manualMap = overrides.manualRank?.['ALL'] || overrides.manualRank?.['open'] || overrides.manualRank;
+    if (manualMap) {
+      const ra = manualMap[a.teamId];
+      const rb = manualMap[b.teamId];
+      if (ra != null && rb != null) return ra - rb;
+      if (ra != null) return -1;
+      if (rb != null) return 1;
+    }
+
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (a.losses !== b.losses) return a.losses - b.losses;
+    if (b.diff !== a.diff) return b.diff - a.diff;
+    if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
     if (b.h2hWins !== a.h2hWins) return b.h2hWins - a.h2hWins;
     return a.teamId.localeCompare(b.teamId);
   });
@@ -394,6 +496,75 @@ export function getAdvancingTeams(groups, matches, overrides = {}, advanceCount 
     }
   }
   return advancing;
+}
+
+// ─── Generate knockout bracket from open standings ─────────────────
+export function generateOpenBracket(standings, advanceCount = 4, tablesCount = 2) {
+  const seeds = (standings || []).slice(0, advanceCount).map(s => s.teamId);
+  const count = Math.max(1, tablesCount || 2);
+  const tableForSemi = (idx) => (idx === 0 ? 1 : (2 <= count ? 2 : 1));
+  const tableForQuarter = (idx) => ((idx % count) + 1);
+
+  if (seeds.length <= 2) {
+    return {
+      rounds: [
+        {
+          name: 'Championship Final',
+          matches: [
+            { id: nextMatchId(), stage: 'knockout', round: 'final', matchNum: 1, teamA: seeds[0] || null, teamB: seeds[1] || null, table: 1, winner: null },
+          ],
+        },
+      ],
+    };
+  }
+
+  if (advanceCount >= 8 && seeds.length >= 8) {
+    return {
+      rounds: [
+        {
+          name: 'Quarterfinals',
+          matches: [
+            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 1, teamA: seeds[0] || null, teamB: seeds[7] || null, table: tableForQuarter(0), winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 2, teamA: seeds[3] || null, teamB: seeds[4] || null, table: tableForQuarter(1), winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 3, teamA: seeds[1] || null, teamB: seeds[6] || null, table: tableForQuarter(2), winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'quarter', matchNum: 4, teamA: seeds[2] || null, teamB: seeds[5] || null, table: tableForQuarter(3), winner: null },
+          ],
+        },
+        {
+          name: 'Semifinals',
+          matches: [
+            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 1, teamA: null, teamB: null, table: tableForSemi(0), winner: null },
+            { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 2, teamA: null, teamB: null, table: tableForSemi(1), winner: null },
+          ],
+        },
+        {
+          name: 'Championship Final',
+          matches: [
+            { id: nextMatchId(), stage: 'knockout', round: 'final', matchNum: 1, teamA: null, teamB: null, table: 1, winner: null },
+          ],
+        },
+      ],
+    };
+  }
+
+  // Default: Top 4 (Semifinals -> Final)
+  return {
+    rounds: [
+      {
+        name: 'Semifinals',
+        matches: [
+          { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 1, teamA: seeds[0] || null, teamB: seeds[3] || null, table: tableForSemi(0), winner: null },
+          { id: nextMatchId(), stage: 'knockout', round: 'semi', matchNum: 2, teamA: seeds[1] || null, teamB: seeds[2] || null, table: tableForSemi(1), winner: null },
+        ],
+      },
+      {
+        name: 'Championship Final',
+        matches: [
+          { id: nextMatchId(), stage: 'knockout', round: 'final', matchNum: 1, teamA: null, teamB: null, table: 1, winner: null },
+        ],
+      },
+    ],
+  };
 }
 
 // ─── Generate knockout bracket ──────────────────────────────────────

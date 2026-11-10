@@ -10,6 +10,7 @@ export default function LandingPage() {
 
   const stageLabel = {
     setup: 'Registration Open',
+    open: 'Table Queue Live',
     groups: 'Group Stage Live',
     knockout: 'Knockout Stage',
     finished: 'Tournament Complete',

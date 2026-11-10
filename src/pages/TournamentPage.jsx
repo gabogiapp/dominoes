@@ -6,11 +6,13 @@ import { getActiveMatches, isGroupStageComplete } from '../utils/tournamentEngin
 import TVStandingsTable from '../components/TVStandingsTable';
 import TVMatchCard from '../components/TVMatchCard';
 import TVOpenTableCard from '../components/TVOpenTableCard';
+import TableDispatcher from '../components/TableDispatcher';
+import TVOpenStandingsTable from '../components/TVOpenStandingsTable';
 import { useAdminStatus } from '../utils/storage';
-import { Trophy, PlusCircle } from 'lucide-react';
+import { Trophy, PlusCircle, Play, Layers, ArrowRightLeft } from 'lucide-react';
 
 export default function TournamentPage() {
-  const { state, recordWinner } = useTournament();
+  const { state, recordWinner, startOpenStage, startGroupStage } = useTournament();
   const { stage, matches, groups, teams, champion } = state;
   const isAdmin = useAdminStatus();
   const tablesCount = Math.max(1, state.tablesCount || 2);
@@ -24,17 +26,17 @@ export default function TournamentPage() {
     const activeTeams = teams.filter(t => !t.withdrawn);
     return (
       <div className="min-h-[calc(100vh-56px)] flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-lg">
           <p className="font-mono text-xs tracking-[0.3em] uppercase text-timber/30 mb-4">
             Tournament
           </p>
           <h1 className="font-display text-3xl md:text-4xl font-bold uppercase tracking-wider text-timber mb-4">
-            Coming Soon
+            Ready to Begin
           </h1>
           <div className="h-0.5 bg-terra w-16 mx-auto mb-4" />
           <p className="font-sans text-sm text-timber/60 mb-6">
             {activeTeams.length > 0
-              ? `${activeTeams.length} teams registered · ${tablesCount} Active ${tablesCount === 1 ? 'Table' : 'Tables'} · Waiting for tournament to begin`
+              ? `${activeTeams.length} teams registered · ${tablesCount} Active ${tablesCount === 1 ? 'Table' : 'Tables'}`
               : 'Registration is currently open · Be the first team to enter the tournament!'}
           </p>
 
@@ -46,13 +48,40 @@ export default function TournamentPage() {
               <PlusCircle size={15} /> Register Team Now
             </Link>
           ) : (
-            <div className="flex flex-wrap justify-center gap-2 mt-6">
-              {activeTeams.map(team => (
-                <span key={team.id} className="font-mono text-xs uppercase px-2 py-1 border border-timber/10 rounded text-timber/60 bg-bone">
-                  {team.name}
-                </span>
-              ))}
-            </div>
+            <>
+              {isAdmin && (
+                <div className="mb-6 p-5 border-2 border-felt/30 bg-felt/5 rounded-2xl">
+                  <span className="font-mono text-xs uppercase tracking-widest text-felt font-bold block mb-2">
+                    ◆ Tournament Mode Selector
+                  </span>
+                  <p className="font-sans text-xs text-timber/70 mb-4">
+                    Choose how you want to manage matches:
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button
+                      onClick={startOpenStage}
+                      className="px-5 py-3 bg-felt text-bone font-display text-xs uppercase tracking-wider rounded-xl font-bold hover:bg-felt-light transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Play size={14} /> Start Table Queue (Manual Dispatch)
+                    </button>
+                    <button
+                      onClick={startGroupStage}
+                      className="px-4 py-3 bg-bone border border-timber/20 text-timber font-mono text-xs uppercase tracking-wider rounded-xl font-bold hover:bg-timber/5 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Layers size={13} /> Group Pools
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap justify-center gap-2 mt-4">
+                {activeTeams.map(team => (
+                  <span key={team.id} className="font-mono text-xs uppercase px-2.5 py-1 border border-timber/15 rounded-lg text-timber/70 bg-bone shadow-2xs">
+                    {team.name}
+                  </span>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -89,8 +118,50 @@ export default function TournamentPage() {
     );
   }
 
+  // Open Table Queue stage (Manual Dispatch & Point Differentials)
+  if (stage === 'open') {
+    return (
+      <div className="min-h-[calc(100vh-56px)] max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-8">
+        {/* Banner */}
+        <div className="text-center">
+          <p className="font-mono text-xs tracking-[0.3em] uppercase text-timber/40 mb-1">
+            Live Tournament Stage
+          </p>
+          <h1 className="font-display text-2xl md:text-4xl font-bold uppercase tracking-wider text-timber">
+            Table Queue & Standby Arena
+          </h1>
+          <div className="h-0.5 bg-felt w-16 mx-auto mt-2 mb-2" />
+          <p className="font-mono text-xs text-timber/60">
+            Manual Table Dispatch · Standby Queue · Wins, Losses & Point Differentials (±)
+          </p>
+        </div>
+
+        {/* Table Dispatcher Component */}
+        <TableDispatcher />
+
+        {/* Standings Leaderboard */}
+        <TVOpenStandingsTable />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-[calc(100vh-56px)] max-w-6xl mx-auto px-4 py-6 md:py-8">
+      {/* Switch to manual banner for admin if currently in groups */}
+      {isAdmin && stage === 'groups' && (
+        <div className="mb-6 p-3 bg-felt/10 border border-felt/20 rounded-xl flex items-center justify-between gap-3 text-xs">
+          <span className="font-mono text-timber/70">
+            Prefer manual table dispatch without fixed pools?
+          </span>
+          <button
+            onClick={startOpenStage}
+            className="px-3 py-1.5 bg-felt text-bone font-mono text-xs uppercase tracking-wider rounded-lg font-bold hover:bg-felt-light transition-all cursor-pointer flex items-center gap-1 shrink-0"
+          >
+            <ArrowRightLeft size={12} /> Switch to Table Queue
+          </button>
+        </div>
+      )}
+
       {/* Stage banner */}
       <div className="text-center mb-6">
         <p className="font-mono text-xs tracking-[0.3em] uppercase text-timber/30 mb-1">

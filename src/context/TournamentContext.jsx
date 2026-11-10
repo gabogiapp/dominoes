@@ -29,8 +29,20 @@ import {
   reassignTeamToGroup as engineReassignTeamToGroup,
   updateGroupMatch as engineUpdateGroupMatch,
   swapGroupMatchTeams as engineSwapGroupMatchTeams,
+  calcOpenStandings,
+  generateOpenBracket,
 } from '../utils/tournamentEngine';
 import { fetchTeamsFromGoogleSheet } from '../utils/googleSheets';
+import { playDominoSlam, playDominoClack } from '../utils/dominoAudio';
+
+export function initActiveTables(count = DEFAULT_TABLES_COUNT, existing = {}) {
+  const tables = {};
+  const max = Math.max(1, count || DEFAULT_TABLES_COUNT);
+  for (let i = 1; i <= max; i++) {
+    tables[i] = existing?.[i] || { teamA: null, teamB: null };
+  }
+  return tables;
+}
 
 // ─── Initial state ──────────────────────────────────────────────────
 function buildInitialState(demoOverride) {
@@ -40,9 +52,11 @@ function buildInitialState(demoOverride) {
   if (saved && saved.teams && Array.isArray(saved.teams)) {
     resetMatchIdCounter(saved.matches || []);
     resetTeamIdCounter(saved.teams || []);
+    const tablesCount = saved.tablesCount || DEFAULT_TABLES_COUNT;
     return {
       ...saved,
-      tablesCount: saved.tablesCount || DEFAULT_TABLES_COUNT,
+      tablesCount,
+      activeTables: initActiveTables(tablesCount, saved.activeTables),
       isDemo,
       config: {
         ...DEFAULT_CONFIG,
@@ -66,6 +80,7 @@ function buildInitialState(demoOverride) {
       teams,
       groups,
       matches: [],
+      activeTables: initActiveTables(DEFAULT_TABLES_COUNT),
       bracket: null,
       stage: 'setup',
       overrides: {},
@@ -83,6 +98,7 @@ function buildInitialState(demoOverride) {
     teams: [],
     groups: {},
     matches: [],
+    activeTables: initActiveTables(DEFAULT_TABLES_COUNT),
     bracket: null,
     stage: 'setup',
     overrides: {},
@@ -312,6 +328,7 @@ export function TournamentProvider({ children }) {
   const setTablesCount = useCallback((count) => {
     mutate(`Set tables to ${count}`, (s) => {
       s.tablesCount = count;
+      s.activeTables = initActiveTables(count, s.activeTables);
       if (s.matches && s.matches.length > 0) {
         s.matches = rescheduleGroupMatches(s.matches, count);
       }
@@ -324,6 +341,140 @@ export function TournamentProvider({ children }) {
           });
         });
       }
+      return s;
+    });
+  }, [mutate]);
+
+  // ─── Open Play / Manual Table Dispatch Actions ────────────────────
+
+  const startOpenStage = useCallback(() => {
+    mutate('Started Open Play Table Queue', (s) => {
+      s.stage = 'open';
+      s.activeTables = initActiveTables(s.tablesCount || DEFAULT_TABLES_COUNT);
+      return s;
+    });
+  }, [mutate]);
+
+  const assignTableTeam = useCallback((tableNum, slot, teamId) => {
+    const team = _state.teams.find(t => t.id === teamId);
+    mutate(`Seated ${team?.name || 'team'} at Table ${tableNum}`, (s) => {
+      if (!s.activeTables) s.activeTables = initActiveTables(s.tablesCount);
+      const tNum = Number(tableNum);
+      if (!s.activeTables[tNum]) s.activeTables[tNum] = { teamA: null, teamB: null };
+
+      // Ensure this team is unassigned from any other table or slot
+      Object.keys(s.activeTables).forEach(t => {
+        if (s.activeTables[t].teamA === teamId) s.activeTables[t].teamA = null;
+        if (s.activeTables[t].teamB === teamId) s.activeTables[t].teamB = null;
+      });
+
+      s.activeTables[tNum][slot] = teamId;
+      try { playDominoClack(); } catch {}
+      return s;
+    });
+  }, [mutate]);
+
+  const removeTableTeam = useCallback((tableNum, slot) => {
+    mutate(`Returned team from Table ${tableNum} to Standby`, (s) => {
+      if (s.activeTables?.[tableNum]) {
+        s.activeTables[tableNum][slot] = null;
+      }
+      return s;
+    });
+  }, [mutate]);
+
+  const clearTable = useCallback((tableNum) => {
+    mutate(`Cleared Table ${tableNum}`, (s) => {
+      if (s.activeTables?.[tableNum]) {
+        s.activeTables[tableNum] = { teamA: null, teamB: null };
+      }
+      return s;
+    });
+  }, [mutate]);
+
+  const swapTableTeams = useCallback((tableNum) => {
+    mutate(`Swapped teams at Table ${tableNum}`, (s) => {
+      if (s.activeTables?.[tableNum]) {
+        const temp = s.activeTables[tableNum].teamA;
+        s.activeTables[tableNum].teamA = s.activeTables[tableNum].teamB;
+        s.activeTables[tableNum].teamB = temp;
+      }
+      return s;
+    });
+  }, [mutate]);
+
+  const recordOpenMatch = useCallback((tableNum, scoreA, scoreB, winnerId) => {
+    const active = _state.activeTables?.[tableNum];
+    if (!active || !active.teamA || !active.teamB) return;
+
+    const teamAObj = _state.teams.find(t => t.id === active.teamA);
+    const teamBObj = _state.teams.find(t => t.id === active.teamB);
+
+    mutate(`Completed Table ${tableNum}: ${teamAObj?.name || 'A'} vs ${teamBObj?.name || 'B'}`, (s) => {
+      if (!s.activeTables?.[tableNum]) return s;
+      const currentActive = s.activeTables[tableNum];
+      if (!currentActive.teamA || !currentActive.teamB) return s;
+
+      const numA = (scoreA !== '' && scoreA != null) ? Number(scoreA) : null;
+      const numB = (scoreB !== '' && scoreB != null) ? Number(scoreB) : null;
+
+      let win = winnerId;
+      if (!win) {
+        if (numA != null && numB != null) {
+          win = numA >= numB ? currentActive.teamA : currentActive.teamB;
+        } else {
+          win = currentActive.teamA;
+        }
+      }
+
+      resetMatchIdCounter(s.matches || []);
+      s.matches.push({
+        id: nextMatchId(),
+        stage: 'open',
+        table: Number(tableNum),
+        teamA: currentActive.teamA,
+        teamB: currentActive.teamB,
+        scoreA: numA,
+        scoreB: numB,
+        winner: win,
+        completedAt: Date.now(),
+      });
+
+      s.activeTables[tableNum] = { teamA: null, teamB: null };
+      try { playDominoSlam(); } catch {}
+      return s;
+    });
+  }, [mutate]);
+
+  const updateMatchScore = useCallback((matchId, updates) => {
+    mutate('Updated match score', (s) => {
+      const match = s.matches.find(m => m.id === matchId);
+      if (match) {
+        if (updates.scoreA !== undefined) match.scoreA = (updates.scoreA !== '' && updates.scoreA != null) ? Number(updates.scoreA) : null;
+        if (updates.scoreB !== undefined) match.scoreB = (updates.scoreB !== '' && updates.scoreB != null) ? Number(updates.scoreB) : null;
+        if (updates.winner !== undefined) match.winner = updates.winner;
+        else if (match.scoreA != null && match.scoreB != null) {
+          match.winner = match.scoreA >= match.scoreB ? match.teamA : match.teamB;
+        }
+      }
+      return s;
+    });
+  }, [mutate]);
+
+  const deleteMatch = useCallback((matchId) => {
+    mutate('Deleted match record', (s) => {
+      s.matches = s.matches.filter(m => m.id !== matchId);
+      return s;
+    });
+  }, [mutate]);
+
+  const generateKnockoutFromStandings = useCallback((advanceCount = 4) => {
+    mutate(`Generated knockout bracket (Top ${advanceCount})`, (s) => {
+      s.stage = 'knockout';
+      const activeTeamIds = s.teams.filter(t => !t.withdrawn).map(t => t.id);
+      const standings = calcOpenStandings(activeTeamIds, s.matches, s.overrides);
+      resetMatchIdCounter(s.matches);
+      s.bracket = generateOpenBracket(standings, advanceCount, s.tablesCount || DEFAULT_TABLES_COUNT);
       return s;
     });
   }, [mutate]);
@@ -431,6 +582,7 @@ export function TournamentProvider({ children }) {
       s.champion = null;
       s.stage = 'setup';
       s.overrides = {};
+      s.activeTables = initActiveTables(s.tablesCount || DEFAULT_TABLES_COUNT);
       const rec = recommendGroups(s.teams.filter(t => !t.withdrawn).length);
       s.groups = distributeTeams(s.teams.filter(t => !t.withdrawn), rec.poolCount);
       return s;
@@ -451,6 +603,7 @@ export function TournamentProvider({ children }) {
       teams: DEFAULT_TEAMS.map(t => ({ ...t, withdrawn: false })),
       groups: {},
       matches: [],
+      activeTables: initActiveTables(DEFAULT_TABLES_COUNT),
       bracket: null,
       stage: 'setup',
       overrides: {},
@@ -473,6 +626,7 @@ export function TournamentProvider({ children }) {
       teams: [],
       groups: {},
       matches: [],
+      activeTables: initActiveTables(DEFAULT_TABLES_COUNT),
       bracket: null,
       stage: 'setup',
       overrides: {},
@@ -704,6 +858,15 @@ export function TournamentProvider({ children }) {
     updateGroupMatch,
     swapGroupMatchTeams,
     updateConfig,
+    startOpenStage,
+    assignTableTeam,
+    removeTableTeam,
+    clearTable,
+    swapTableTeams,
+    recordOpenMatch,
+    updateMatchScore,
+    deleteMatch,
+    generateKnockoutFromStandings,
     undo,
     resetTournament,
     fullReset,

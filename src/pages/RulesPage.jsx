@@ -37,19 +37,19 @@ export default function RulesPage() {
           </div>
         </section>
 
-        {/* Section 2: Group Stage */}
+        {/* Section 2: Match Play & Scoring */}
         <section className="border-2 border-timber rounded-lg overflow-hidden">
           <div className="bg-felt text-bone px-4 py-2">
             <h2 className="font-display text-sm tracking-widest uppercase">
-              II. Group Stage
+              II. Match Play & Point Differentials
             </h2>
           </div>
           <div className="p-4 space-y-3">
-            <Rule number="1" text="Each group match is played to completion per standard dominoes rules." />
+            <Rule number="1" text="Matches are called to open tables from the Standby Bench to ensure all teams get active playing time." />
             <Rule number="2" text="The winner of each match earns 1 win. The loser earns 1 loss." />
-            <Rule number="3" text="No point differential or score is tracked — only wins and losses." />
-            <Rule number="4" text="Standings are determined by: most wins first, then head-to-head result between tied teams." />
-            <Rule number="5" text="If a tie cannot be resolved automatically, the organizer will decide the tiebreaker." />
+            <Rule number="3" text="Points scored and points allowed are recorded for every game to compute live Point Differentials (±)." />
+            <Rule number="4" text="Standings are ranked by: most wins first, then highest point differential (±), then points scored and head-to-head." />
+            <Rule number="5" text="Top seeds in the standings advance to the single-elimination Championship Knockout Bracket." />
           </div>
         </section>
 
