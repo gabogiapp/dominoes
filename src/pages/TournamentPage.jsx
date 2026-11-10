@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTournament } from '../context/TournamentContext';
 import GroupMatchmaker from '../components/GroupMatchmaker';
-import TVStandingsTable from '../components/TVStandingsTable';
 import { useAdminStatus } from '../utils/storage';
 import { Trophy, PlusCircle, Play } from 'lucide-react';
 
@@ -97,37 +96,10 @@ export default function TournamentPage() {
     );
   }
 
-  // Group Stage — Manual Matchmaking with Drag & Drop & Point Differentials
+  // Group Stage — Side-by-side workspace with Live Tables and Standby Teams
   return (
-    <div className="min-h-[calc(100vh-56px)] max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-8">
-      {/* Header */}
-      <div className="text-center">
-        <p className="font-mono text-xs tracking-[0.3em] uppercase text-timber/30 mb-1">
-          Tournament Live
-        </p>
-        <h1 className="font-display text-2xl md:text-3xl font-bold uppercase tracking-wider text-timber">
-          Group Stage
-        </h1>
-        <div className="h-0.5 bg-felt w-16 mx-auto mt-2 mb-2" />
-        <p className="font-mono text-xs text-timber/60">
-          Drag teams from Standby into tables · Track scores & point differentials (±)
-        </p>
-      </div>
-
-      {/* Manual Table Matchmaker (Tables Drop Zones, Standby by Group, Match Log) */}
+    <div className="min-h-[calc(100vh-56px)] max-w-7xl mx-auto px-4 py-6 md:py-8 space-y-6">
       <GroupMatchmaker />
-
-      {/* Pool Standings */}
-      <div>
-        <h2 className="font-mono text-xs tracking-[0.2em] uppercase text-timber/40 mb-3 text-center">
-          Pool Standings
-        </h2>
-        <div className={`grid gap-5 ${groupLabels.length === 1 ? 'max-w-xl mx-auto' : 'grid-cols-1 md:grid-cols-2'}`}>
-          {groupLabels.map(gid => (
-            <TVStandingsTable key={gid} groupId={gid} />
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
