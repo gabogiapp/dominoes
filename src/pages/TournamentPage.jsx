@@ -11,7 +11,6 @@ export default function TournamentPage() {
   const { stage, groups, teams, champion } = state;
   const isAdmin = useAdminStatus();
   const tablesCount = Math.max(1, state.tablesCount || 2);
-  const groupLabels = Object.keys(groups || {}).sort();
 
   // Setup state
   if (stage === 'setup') {
