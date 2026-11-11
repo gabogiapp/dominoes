@@ -14,7 +14,7 @@ export default function BracketPage() {
 
   const showChampion = Boolean(champion && champion.id !== dismissedChampionId);
 
-  if (!bracket && stage !== 'finished') {
+  if (!bracket) {
     const activeTeams = state.teams.filter(t => !t.withdrawn);
 
     return (

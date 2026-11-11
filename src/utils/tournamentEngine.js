@@ -744,6 +744,8 @@ export function advanceBracketWinner(bracket, matchId, winnerId) {
           nextMatch.teamA = winnerId;
           if (prevWinner && prevWinner !== winnerId) {
             nextMatch.winner = null;
+            nextMatch.scoreA = null;
+            nextMatch.scoreB = null;
             clearDownstreamSlots(newBracket, nextRoundIdx, targetSlot);
           }
         }
@@ -752,6 +754,8 @@ export function advanceBracketWinner(bracket, matchId, winnerId) {
           nextMatch.teamB = winnerId;
           if (prevWinner && prevWinner !== winnerId) {
             nextMatch.winner = null;
+            nextMatch.scoreA = null;
+            nextMatch.scoreB = null;
             clearDownstreamSlots(newBracket, nextRoundIdx, targetSlot);
           }
         }
@@ -776,6 +780,8 @@ function clearDownstreamSlots(bracket, rIdx, mIdx) {
       nextMatch.teamB = null;
     }
     nextMatch.winner = null;
+    nextMatch.scoreA = null;
+    nextMatch.scoreB = null;
     clearDownstreamSlots(bracket, nextRIdx, targetSlot);
   }
 }
@@ -800,9 +806,11 @@ export function resetBracketMatch(bracket, matchId) {
 
   if (matchRoundIdx === -1) return newBracket;
 
-  // Clear this match winner
+  // Clear this match winner and scores
   const currentMatch = newBracket.rounds[matchRoundIdx].matches[matchIdx];
   currentMatch.winner = null;
+  currentMatch.scoreA = null;
+  currentMatch.scoreB = null;
 
   // Cascade clear downstream
   clearDownstreamSlots(newBracket, matchRoundIdx, matchIdx);
@@ -831,13 +839,24 @@ export function updateBracketMatchParticipants(bracket, matchId, updates = {}) {
     for (let mi = 0; mi < newBracket.rounds[ri].matches.length; mi++) {
       const m = newBracket.rounds[ri].matches[mi];
       if (m.id === matchId) {
+        const teamAChanged = updates.teamA !== undefined && updates.teamA !== m.teamA;
+        const teamBChanged = updates.teamB !== undefined && updates.teamB !== m.teamB;
+
         if (updates.teamA !== undefined) m.teamA = updates.teamA;
         if (updates.teamB !== undefined) m.teamB = updates.teamB;
         if (updates.table !== undefined) m.table = updates.table;
 
+        // If participants changed, reset scores as match context is different
+        if (teamAChanged || teamBChanged) {
+          m.scoreA = null;
+          m.scoreB = null;
+        }
+
         // If the current winner is no longer valid, clear it and cascade downstream
-        if (m.winner && m.winner !== m.teamA && m.winner !== m.teamB) {
+        if (m.winner && (m.winner !== m.teamA && m.winner !== m.teamB)) {
           m.winner = null;
+          m.scoreA = null;
+          m.scoreB = null;
           clearDownstreamSlots(newBracket, ri, mi);
         }
         return newBracket;
@@ -848,7 +867,7 @@ export function updateBracketMatchParticipants(bracket, matchId, updates = {}) {
 }
 
 /**
- * Swaps teamA and teamB for a bracket match.
+ * Swaps teamA and teamB for a bracket match, maintaining score attribution.
  */
 export function swapBracketMatchTeams(bracket, matchId) {
   if (!bracket || !bracket.rounds) return bracket;
@@ -858,9 +877,14 @@ export function swapBracketMatchTeams(bracket, matchId) {
     for (let mi = 0; mi < newBracket.rounds[ri].matches.length; mi++) {
       const m = newBracket.rounds[ri].matches[mi];
       if (m.id === matchId) {
-        const temp = m.teamA;
+        const tempTeam = m.teamA;
         m.teamA = m.teamB;
-        m.teamB = temp;
+        m.teamB = tempTeam;
+
+        const tempScore = m.scoreA;
+        m.scoreA = m.scoreB;
+        m.scoreB = tempScore;
+
         return newBracket;
       }
     }
@@ -890,6 +914,11 @@ export function swapBracketSlots(bracket, matchId1, slot1, matchId2, slot2) {
     const temp = m1[slot1];
     m1[slot1] = m2[slot2];
     m2[slot2] = temp;
+
+    m1.scoreA = null;
+    m1.scoreB = null;
+    m2.scoreA = null;
+    m2.scoreB = null;
 
     if (m1.winner && m1.winner !== m1.teamA && m1.winner !== m1.teamB) {
       m1.winner = null;
@@ -1163,13 +1192,145 @@ export function withdrawTeam(state, teamId) {
   const team = newState.teams.find(t => t.id === teamId);
   if (team) team.withdrawn = true;
 
-  // Remove unplayed matches involving this team
-  newState.matches = newState.matches.map(m => {
+  // 1. Remove unplayed group matches involving this team
+  newState.matches = (newState.matches || []).map(m => {
     if (!m.winner && (m.teamA === teamId || m.teamB === teamId)) {
       return { ...m, winner: '__withdrawn__' };
     }
     return m;
   });
 
+  // 2. Unseat from any activeTables
+  if (newState.activeTables) {
+    Object.keys(newState.activeTables).forEach(t => {
+      const tbl = newState.activeTables[t];
+      if (tbl) {
+        if (tbl.teamA === teamId) tbl.teamA = null;
+        if (tbl.teamB === teamId) tbl.teamB = null;
+      }
+    });
+  }
+
+  // 3. Forfeit or clear in bracket matches
+  if (newState.bracket && newState.bracket.rounds) {
+    for (let ri = 0; ri < newState.bracket.rounds.length; ri++) {
+      for (let mi = 0; mi < newState.bracket.rounds[ri].matches.length; mi++) {
+        const bm = newState.bracket.rounds[ri].matches[mi];
+        if (!bm.winner && (bm.teamA === teamId || bm.teamB === teamId)) {
+          if (bm.teamA === teamId && bm.teamB) {
+            // Opponent advances on walkover/bye
+            newState.bracket = advanceBracketWinner(newState.bracket, bm.id, bm.teamB);
+          } else if (bm.teamB === teamId && bm.teamA) {
+            // Opponent advances on walkover/bye
+            newState.bracket = advanceBracketWinner(newState.bracket, bm.id, bm.teamA);
+          } else {
+            if (bm.teamA === teamId) bm.teamA = null;
+            if (bm.teamB === teamId) bm.teamB = null;
+          }
+        } else if (bm.winner === teamId) {
+          // If match was already completed with this team as winner, cascade clear
+          newState.bracket = resetBracketMatch(newState.bracket, bm.id);
+        }
+      }
+    }
+  }
+
+  // 4. Clear champion if the withdrawn team was the champion
+  if (newState.champion?.id === teamId) {
+    newState.champion = null;
+    if (newState.stage === 'finished') {
+      newState.stage = newState.bracket ? 'knockout' : 'groups';
+    }
+  }
+
   return newState;
+}
+
+// ─── Tournament State Sanitizer & Invariant Auto-Healer ─────────────
+/**
+ * Hardens tournament state against invalid or desynchronized state combinations:
+ * - Stage <-> Champion <-> Bracket invariants.
+ * - Table dispatch key normalization & prevents duplicate team seating.
+ * - Auto-recovers champion if final match was won.
+ * - Auto-heals stage if marked finished without champion, or knockout without bracket.
+ */
+export function sanitizeTournamentState(state, defaultTablesCount = 2) {
+  if (!state || typeof state !== 'object') return state;
+  const s = state;
+
+  if (!Array.isArray(s.teams)) s.teams = [];
+  if (!Array.isArray(s.matches)) s.matches = [];
+  if (!s.groups || typeof s.groups !== 'object') s.groups = {};
+  if (!s.overrides || typeof s.overrides !== 'object') s.overrides = {};
+
+  // Normalize legacy stage naming
+  if (s.stage === 'open') s.stage = 'groups';
+  if (!s.stage) s.stage = 'setup';
+
+  // Normalize tablesCount & activeTables
+  const count = Math.max(1, Number(s.tablesCount) || defaultTablesCount);
+  s.tablesCount = count;
+  if (!s.activeTables || typeof s.activeTables !== 'object') {
+    s.activeTables = {};
+  }
+  const cleanActiveTables = {};
+  const seenSeated = new Set();
+  for (let i = 1; i <= count; i++) {
+    const existing = s.activeTables[i] || s.activeTables[String(i)] || {};
+    let tA = existing.teamA || null;
+    let tB = existing.teamB || null;
+
+    if (tA) {
+      if (seenSeated.has(tA)) tA = null;
+      else seenSeated.add(tA);
+    }
+    if (tB) {
+      if (seenSeated.has(tB)) tB = null;
+      else seenSeated.add(tB);
+    }
+
+    cleanActiveTables[i] = { teamA: tA, teamB: tB };
+  }
+  s.activeTables = cleanActiveTables;
+
+  // Bracket final match check
+  const allRounds = s.bracket?.rounds || [];
+  const finalRound = allRounds[allRounds.length - 1];
+  const finalMatch = finalRound?.matches?.[0];
+
+  // Stage & Champion Coherence Invariant
+  if (s.stage === 'finished') {
+    // If finished, we must have a champion
+    if (!s.champion && finalMatch?.winner) {
+      s.champion = s.teams.find(t => t.id === finalMatch.winner) || null;
+    }
+    // If still no champion, heal stage back to knockout or groups
+    if (!s.champion) {
+      s.stage = s.bracket ? 'knockout' : (s.matches.length > 0 || Object.keys(s.groups).length > 0) ? 'groups' : 'setup';
+    }
+  } else if (s.stage === 'knockout') {
+    if (!s.bracket || !Array.isArray(s.bracket.rounds) || s.bracket.rounds.length === 0) {
+      s.stage = (s.matches.length > 0 || Object.keys(s.groups).length > 0) ? 'groups' : 'setup';
+    } else if (finalMatch?.winner) {
+      s.champion = s.teams.find(t => t.id === finalMatch.winner) || null;
+      if (s.champion) {
+        s.stage = 'finished';
+      }
+    }
+  } else if (s.stage === 'setup') {
+    s.champion = null;
+  }
+
+  // Champion integrity: must exist in teams and not be withdrawn
+  if (s.champion) {
+    const matchingTeam = s.teams.find(t => t.id === s.champion.id);
+    if (!matchingTeam || matchingTeam.withdrawn) {
+      s.champion = null;
+      if (s.stage === 'finished') {
+        s.stage = s.bracket ? 'knockout' : 'groups';
+      }
+    }
+  }
+
+  return s;
 }

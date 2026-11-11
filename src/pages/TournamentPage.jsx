@@ -66,31 +66,55 @@ export default function TournamentPage() {
   }
 
   // Champion state
-  if (stage === 'finished' && champion) {
+  if (stage === 'finished') {
+    if (champion) {
+      return (
+        <div className="min-h-[calc(100vh-56px)] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center max-w-lg"
+          >
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-brass/20 rounded-full mb-6">
+              <Trophy size={40} className="text-brass" />
+            </div>
+            <p className="font-mono text-xs tracking-[0.3em] uppercase text-timber/40 mb-3">
+              Tournament Champion
+            </p>
+            <h1 className="font-display text-5xl md:text-6xl font-bold uppercase tracking-wider text-timber mb-3">
+              {champion.name}
+            </h1>
+            <div className="h-0.5 bg-brass w-24 mx-auto mb-3" />
+            <p className="font-mono text-sm text-timber/50">
+              {champion.player1} & {champion.player2}
+            </p>
+            <p className="font-display text-sm text-terra tracking-widest uppercase mt-6">
+              ◆ ◆ ◆
+            </p>
+          </motion.div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-[calc(100vh-56px)] flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center max-w-lg"
-        >
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-brass/20 rounded-full mb-6">
-            <Trophy size={40} className="text-brass" />
+        <div className="text-center max-w-lg">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-brass/20 rounded-full mb-4">
+            <Trophy size={32} className="text-brass" />
           </div>
-          <p className="font-mono text-xs tracking-[0.3em] uppercase text-timber/40 mb-3">
-            Tournament Champion
-          </p>
-          <h1 className="font-display text-5xl md:text-6xl font-bold uppercase tracking-wider text-timber mb-3">
-            {champion.name}
+          <h1 className="font-display text-2xl font-bold uppercase tracking-wider text-timber mb-3">
+            Tournament Complete
           </h1>
-          <div className="h-0.5 bg-brass w-24 mx-auto mb-3" />
-          <p className="font-mono text-sm text-timber/50">
-            {champion.player1} & {champion.player2}
+          <p className="font-sans text-sm text-timber/60 mb-6">
+            The tournament has concluded.
           </p>
-          <p className="font-display text-sm text-terra tracking-widest uppercase mt-6">
-            ◆ ◆ ◆
-          </p>
-        </motion.div>
+          <Link
+            to="/bracket"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-felt text-bone font-display text-xs uppercase tracking-wider rounded-xl font-bold hover:bg-felt-light"
+          >
+            View Championship Bracket
+          </Link>
+        </div>
       </div>
     );
   }

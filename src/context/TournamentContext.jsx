@@ -32,6 +32,7 @@ import {
   swapGroupMatchTeams as engineSwapGroupMatchTeams,
   calcOpenStandings,
   generateOpenBracket,
+  sanitizeTournamentState,
 } from '../utils/tournamentEngine';
 import { fetchTeamsFromGoogleSheet } from '../utils/googleSheets';
 import { playDominoSlam, playDominoClack } from '../utils/dominoAudio';
@@ -54,7 +55,7 @@ function buildInitialState(demoOverride) {
     resetMatchIdCounter(saved.matches || []);
     resetTeamIdCounter(saved.teams || []);
     const tablesCount = saved.tablesCount || DEFAULT_TABLES_COUNT;
-    return {
+    const restored = {
       ...saved,
       stage: saved.stage === 'open' ? 'groups' : (saved.stage || 'setup'),
       tablesCount,
@@ -69,6 +70,7 @@ function buildInitialState(demoOverride) {
         googleSheetUrl: (!saved.config?.googleSheetUrl || saved.config?.googleSheetUrl.includes('PLACEHOLDER')) ? DEFAULT_CONFIG.googleSheetUrl : saved.config.googleSheetUrl,
       },
     };
+    return sanitizeTournamentState(restored, DEFAULT_TABLES_COUNT);
   }
 
   // Demo Mode initial state: Seed with the 8 sample teams
@@ -128,8 +130,8 @@ function emitChange() {
 }
 
 function setState(newState, skipSave) {
-  _state = newState;
-  if (!skipSave) saveState(newState, newState?.isDemo);
+  _state = sanitizeTournamentState(newState, DEFAULT_TABLES_COUNT);
+  if (!skipSave) saveState(_state, _state?.isDemo);
   emitChange();
 }
 
@@ -141,9 +143,9 @@ if (typeof window !== 'undefined') {
       try {
         const parsed = JSON.parse(e.newValue);
         if (parsed && typeof parsed === 'object') {
-          _state = parsed;
-          resetMatchIdCounter(parsed.matches || []);
-          resetTeamIdCounter(parsed.teams || []);
+          _state = sanitizeTournamentState(parsed, DEFAULT_TABLES_COUNT);
+          resetMatchIdCounter(_state.matches || []);
+          resetTeamIdCounter(_state.teams || []);
           emitChange();
         }
       } catch { /* ignore malformed */ }
@@ -534,6 +536,15 @@ export function TournamentProvider({ children }) {
     mutate('Swapped match home/away slots', (s) => {
       if (!s.bracket) return s;
       s.bracket = engineSwapBracketMatchTeams(s.bracket, matchId);
+      const allRounds = s.bracket?.rounds || [];
+      const finalRound = allRounds[allRounds.length - 1];
+      const finalMatch = finalRound?.matches?.[0];
+      if (!finalMatch?.winner) {
+        s.champion = null;
+        if (s.stage === 'finished') s.stage = 'knockout';
+      } else {
+        s.champion = s.teams.find(t => t.id === finalMatch.winner) || null;
+      }
       return s;
     });
   }, [mutate]);
@@ -548,6 +559,8 @@ export function TournamentProvider({ children }) {
       if (!finalMatch?.winner) {
         s.champion = null;
         if (s.stage === 'finished') s.stage = 'knockout';
+      } else {
+        s.champion = s.teams.find(t => t.id === finalMatch.winner) || null;
       }
       return s;
     });
